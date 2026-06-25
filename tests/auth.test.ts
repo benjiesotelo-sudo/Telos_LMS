@@ -3,6 +3,7 @@ import { gateRoute } from '@/lib/auth/gateRoute'
 import { signInAs, setTestUser, clearTestUser } from '@/tests/helpers/auth'
 import { createUser, seedCourse, seedPeriod } from '@/tests/helpers/fixtures'
 import { enrollStudent } from '@/app/actions/enrollStudent'
+import { acceptInvite } from '@/app/actions/acceptInvite'
 import { createAdminClient } from '@/lib/supabase/server'
 
 describe('gateRoute (pure helper)', () => {
@@ -126,5 +127,88 @@ describe('enrollStudent (instructor creates an invite link)', () => {
     expect(data?.full_name).toBe('New Student')
     expect(data?.student_number).toBe('2026-00001')
     expect(data?.consumed_at).toBeNull()
+  })
+})
+
+describe('acceptInvite (provision student, single-use token)', () => {
+  const u = Date.now() + 2
+  const instrEmail = `accept-instr-${u}@telos.test`
+  const instrPass = 'Accept-pass-123!'
+  const studentEmail = `accept-student-${u}@telos.test`
+  const studentPass = 'Student-pass-123!'
+  let instructorId: string
+  let courseId: string
+  let periodId: string
+  let token: string
+
+  beforeAll(async () => {
+    const instr = await createUser({
+      role: 'instructor',
+      email: instrEmail,
+      password: instrPass,
+      fullName: 'Accept Instructor',
+    })
+    instructorId = instr.id
+    courseId = (await seedCourse({ instructorId, code: 'AMS0011', title: 'Algebra & Trig' })).id
+    periodId = (await seedPeriod({ courseId, instructorId, label: '1st Semester' })).id
+
+    await setTestUser(instrEmail, instrPass)
+    const { inviteUrl } = await enrollStudent({
+      courseId,
+      periodId,
+      email: studentEmail,
+      fullName: 'Accept Student',
+      studentNumber: '2026-09999',
+    })
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+    token = inviteUrl.slice(`${base}/invite/`.length)
+    clearTestUser()
+  })
+
+  it('accepting yields a student profile + enrollment and consumes the token', async () => {
+    const res = await acceptInvite({ token, password: studentPass })
+    expect(res).toEqual({ ok: true })
+
+    const admin = createAdminClient()
+
+    const { data: profile } = await admin
+      .from('profiles')
+      .select('role, status, email, full_name, student_number')
+      .eq('email', studentEmail)
+      .single()
+    expect(profile?.role).toBe('student')
+    expect(profile?.status).toBe('active')
+    expect(profile?.email).toBe(studentEmail)
+    expect(profile?.full_name).toBe('Accept Student')
+    expect(profile?.student_number).toBe('2026-09999')
+
+    const { data: prof2 } = await admin
+      .from('profiles')
+      .select('id')
+      .eq('email', studentEmail)
+      .single()
+    const { data: enrollment } = await admin
+      .from('enrollments')
+      .select('course_id, period_id, status')
+      .eq('student_id', prof2!.id)
+      .single()
+    expect(enrollment?.course_id).toBe(courseId)
+    expect(enrollment?.period_id).toBe(periodId)
+
+    const { data: invite } = await admin
+      .from('invites')
+      .select('consumed_at')
+      .eq('token', token)
+      .single()
+    expect(invite?.consumed_at).not.toBeNull()
+
+    // The new student can sign in with the chosen password.
+    const { accessToken } = await signInAs(studentEmail, studentPass)
+    expect(accessToken).toBeTruthy()
+    clearTestUser()
+  })
+
+  it('the token is single-use: a second accept fails', async () => {
+    await expect(acceptInvite({ token, password: 'Another-pass-123!' })).rejects.toThrow()
   })
 })
