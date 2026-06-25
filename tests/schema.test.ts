@@ -152,7 +152,7 @@ describe('seed.sql pilot scoping', () => {
     } else {
       // If a bootstrap user does exist, the seed attached exactly its pilot course,
       // scoped to that instructor's id (never a global code count), with a
-      // 1st Semester period.
+      // Midyear period.
       const { data: pilotCourses, error } = await admin
         .from('courses')
         .select('id, instructor_id')
@@ -166,7 +166,7 @@ describe('seed.sql pilot scoping', () => {
         .select('label')
         .eq('course_id', pilotCourses![0].id)
       expect(pErr).toBeNull()
-      expect(periods!.map((r) => r.label)).toContain('1st Semester')
+      expect(periods!.map((r) => r.label)).toContain('Midyear')
     }
   })
 })
