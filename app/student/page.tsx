@@ -44,22 +44,68 @@ export default async function StudentDashboard() {
     }
   }
 
+  // RLS scopes this to the logged-in student automatically.
+  const { data: subs } = await supabase
+    .from('submissions')
+    .select('id, assignment_id')
+    .eq('status', 'graded')
+
+  const submissionMap = new Map(subs?.map(s => [s.assignment_id, s.id]) ?? [])
+
   return (
-    <main style={{ padding: 24 }}>
-      <h1>Your assessments</h1>
-      {assignments.length === 0 ? (
-        <p>No assessments assigned yet.</p>
-      ) : (
-        <ul>
-          {assignments.map((a) => (
-            <li key={a.id}>
-              <Link href={`/student/take/${a.id}`}>
-                {a.title} ({a.type})
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </main>
+    <>
+      <header className="feu-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className="feu-crest">T</div>
+          <div>
+            <p className="feu-inst">Far Eastern University</p>
+            <h1>Your Assessments</h1>
+          </div>
+        </div>
+      </header>
+      <div className="feu-wrap">
+        {assignments.length === 0 ? (
+          <p className="feu-muted">No assessments assigned yet.</p>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            {assignments.map((a) => {
+              const submissionId = submissionMap.get(a.id)
+              const isCompleted = submissionMap.has(a.id)
+              return (
+                <div key={a.id} className="feu-card">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <h2 style={{ margin: 0, fontSize: 18 }}>{a.title}</h2>
+                    {isCompleted && (
+                      <span style={{
+                        fontSize: 12,
+                        color: 'var(--green)',
+                        fontWeight: 600,
+                        border: '1px solid var(--green)',
+                        borderRadius: 4,
+                        padding: '2px 8px',
+                      }}>
+                        Completed
+                      </span>
+                    )}
+                  </div>
+                  <p className="feu-muted" style={{ margin: '0 0 12px' }}>
+                    Type: {a.type}
+                  </p>
+                  {isCompleted ? (
+                    <Link href={`/student/results/${submissionId}`} className="feu-btn-outline">
+                      View result
+                    </Link>
+                  ) : (
+                    <Link href={`/student/take/${a.id}`} className="feu-btn-gold">
+                      Take assessment
+                    </Link>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    </>
   )
 }

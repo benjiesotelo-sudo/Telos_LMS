@@ -1,3 +1,4 @@
+import Link from 'next/link'
 import { createClient } from '@/lib/supabase/server'
 
 export default async function ResultsPage({ params }: { params: Promise<{ submissionId: string }> }) {
@@ -21,13 +22,44 @@ export default async function ResultsPage({ params }: { params: Promise<{ submis
   const assessment = (sub as any).assignments?.assessment
 
   return (
-    <main>
-      <h1>Your result</h1>
-      <h2>{assessment?.title ?? 'Assessment'}</h2>
-      <p>Type: {assessment?.type ?? '—'}</p>
-      <p>Earned: {sub.earned ?? 0} / {sub.possible ?? 0}</p>
-      <p>Score: {sub.score == null ? '—' : Number(sub.score).toFixed(2)}</p>
-      <p>Status: {sub.status}</p>
-    </main>
+    <>
+      <header className="feu-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <div className="feu-crest">T</div>
+          <div>
+            <p className="feu-inst">Far Eastern University</p>
+            <h1>Your Result</h1>
+          </div>
+        </div>
+      </header>
+      <div className="feu-wrap">
+        <div className="feu-card">
+          <h2 style={{ marginTop: 0, marginBottom: 4 }}>
+            {assessment?.title ?? 'Assessment'}
+          </h2>
+          <p className="feu-muted" style={{ margin: '0 0 24px' }}>
+            Type: {assessment?.type ?? '—'}
+          </p>
+          <div style={{ fontSize: 48, color: 'var(--green)', fontWeight: 700, lineHeight: 1, marginBottom: 8 }}>
+            {sub.score == null ? '—' : `${Number(sub.score).toFixed(2)}%`}
+          </div>
+          <p style={{ margin: '0 0 8px', color: 'var(--gray)' }}>
+            {sub.earned ?? 0} / {sub.possible ?? 0} points earned
+          </p>
+          <p style={{ margin: '0 0 24px' }}>
+            Status:{' '}
+            <span style={{
+              fontWeight: 600,
+              color: sub.status === 'graded' ? 'var(--green)' : 'var(--ink)',
+            }}>
+              {sub.status}
+            </span>
+          </p>
+          <Link href="/student" className="feu-btn-outline">
+            Back to dashboard
+          </Link>
+        </div>
+      </div>
+    </>
   )
 }
