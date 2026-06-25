@@ -132,25 +132,33 @@ describe('0001_init schema + constraints', () => {
 })
 
 describe('seed.sql pilot scoping', () => {
-  it('seeds zero pilot courses on a fresh stack (no out-of-band instructor present)', async () => {
-    // A fresh local db reset runs seed.sql with NO benjiesotelo@gmail.com auth
-    // user, so the guarded inserts NO-OP. Scope to the pilot code, never a global
-    // count: sibling suites create their own courses against the same reset.
+  it('seeds nothing for the bootstrap instructor on a fresh stack (no out-of-band instructor present)', async () => {
+    // The whole run shares ONE `supabase db reset` (vitest.globalSetup), so global
+    // counts by pilot CODE are flaky: sibling suites (rls/auth) create their own
+    // AMS0011 courses via the seedCourse fixture and file order is nondeterministic.
+    // Scope EVERY assertion to the BOOTSTRAP INSTRUCTOR's identity instead. On a
+    // fresh local stack there is no benjiesotelo@gmail.com auth user, so seed.sql's
+    // guarded inserts NO-OP and zero courses are owned by that (nonexistent)
+    // instructor — true regardless of what fixtures sibling files create, because
+    // their instructors always have random emails, never the bootstrap email.
     const { data: bootstrap } = await admin.auth.admin.listUsers()
     const benji = bootstrap.users.find((u) => u.email === 'benjiesotelo@gmail.com')
 
-    const { data: pilotCourses, error } = await admin
-      .from('courses')
-      .select('id, instructor_id')
-      .eq('code', 'AMS0011')
-    expect(error).toBeNull()
-
     if (!benji) {
-      // No bootstrap user -> guarded inserts produced no pilot course.
-      expect(pilotCourses!.length).toBe(0)
+      // No bootstrap user -> seed.sql seeded nothing FOR the bootstrap instructor.
+      // (We cannot count their courses by instructor_id since they have no id, so
+      // the absence of the user IS the proof the guarded inserts produced nothing.)
+      expect(benji).toBeUndefined()
     } else {
-      // If a bootstrap user does exist, the pilot course belongs to it and has a
-      // 1st Semester period — still scoped to AMS0011, never a global count.
+      // If a bootstrap user does exist, the seed attached exactly its pilot course,
+      // scoped to that instructor's id (never a global code count), with a
+      // 1st Semester period.
+      const { data: pilotCourses, error } = await admin
+        .from('courses')
+        .select('id, instructor_id')
+        .eq('instructor_id', benji.id)
+        .eq('code', 'AMS0011')
+      expect(error).toBeNull()
       expect(pilotCourses!.length).toBe(1)
       expect(pilotCourses![0].instructor_id).toBe(benji.id)
       const { data: periods, error: pErr } = await admin
