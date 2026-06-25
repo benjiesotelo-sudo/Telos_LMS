@@ -1,0 +1,51 @@
+import { describe, it, expect } from 'vitest'
+import { gateRoute } from '@/lib/auth/gateRoute'
+
+describe('gateRoute (pure helper)', () => {
+  it('unauthenticated user on a protected area -> /login', () => {
+    expect(gateRoute(null, '/instructor')).toBe('/login')
+    expect(gateRoute(null, '/student')).toBe('/login')
+    expect(gateRoute(null, '/student/take/abc')).toBe('/login')
+  })
+
+  it('unauthenticated user on a public route -> no redirect', () => {
+    expect(gateRoute(null, '/login')).toBeNull()
+    expect(gateRoute(null, '/')).toBeNull()
+    expect(gateRoute(null, '/invite/tok-123')).toBeNull()
+    expect(gateRoute(null, '/holding')).toBeNull()
+  })
+
+  it('a student is blocked from /instructor and sent to /student', () => {
+    expect(gateRoute({ role: 'student', status: 'active' }, '/instructor')).toBe('/student')
+    expect(gateRoute({ role: 'student', status: 'active' }, '/instructor/import')).toBe('/student')
+  })
+
+  it('an instructor is blocked from /student and sent to /instructor', () => {
+    expect(gateRoute({ role: 'instructor', status: 'active' }, '/student')).toBe('/instructor')
+  })
+
+  it('an instructor on /instructor is NOT bounced (no redirect)', () => {
+    expect(gateRoute({ role: 'instructor', status: 'active' }, '/instructor')).toBeNull()
+    expect(gateRoute({ role: 'instructor', status: 'active' }, '/instructor/submissions')).toBeNull()
+  })
+
+  it('a student on /student is NOT bounced (no redirect)', () => {
+    expect(gateRoute({ role: 'student', status: 'active' }, '/student/results/x')).toBeNull()
+  })
+
+  it('an already-authenticated user hitting / or /login goes to their home', () => {
+    expect(gateRoute({ role: 'instructor', status: 'active' }, '/login')).toBe('/instructor')
+    expect(gateRoute({ role: 'instructor', status: 'active' }, '/')).toBe('/instructor')
+    expect(gateRoute({ role: 'student', status: 'active' }, '/login')).toBe('/student')
+    expect(gateRoute({ role: 'student', status: 'active' }, '/')).toBe('/student')
+  })
+
+  it('a non-active account on a protected area -> /holding', () => {
+    expect(gateRoute({ role: 'student', status: 'pending' }, '/student')).toBe('/holding')
+    expect(gateRoute({ role: 'instructor', status: 'suspended' }, '/instructor')).toBe('/holding')
+  })
+
+  it('a non-active account already on /holding is NOT bounced', () => {
+    expect(gateRoute({ role: 'student', status: 'pending' }, '/holding')).toBeNull()
+  })
+})
