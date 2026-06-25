@@ -31,6 +31,6 @@ describe('shouldRedirectToResult', () => {
   })
 
   it('returns the submission id for an existing submission', () => {
-    expect(shouldRedirectToResult({ id: 'abc-123' })).toBe('abc-123')
+    expect(shouldRedirectToResult({ id: 'abc' })).toBe('abc')
   })
 })

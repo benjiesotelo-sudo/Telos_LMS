@@ -10,7 +10,7 @@ export default async function LoginPage({
     <>
       <header className="feu-header">
         <div className="feu-crest">FEU</div>
-        <p className="feu-inst">Far Eastern University</p>
+        <p className="feu-inst">Far Eastern University · Manila</p>
         <h1>Sign In</h1>
       </header>
       <div style={{ maxWidth: 400, margin: '0 auto', padding: '24px 20px' }}>
