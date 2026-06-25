@@ -1,6 +1,7 @@
 import { getTakePayload } from '@/app/actions/getTakePayload'
-import { submitAssessment } from '@/app/actions/submitAssessment'
+import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
+import TakeForm from './TakeForm'
 
 export default async function TakePage({
   params,
@@ -8,42 +9,34 @@ export default async function TakePage({
   params: Promise<{ assignmentId: string }>
 }) {
   const { assignmentId } = await params
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) redirect('/login')
+
+  // Check for existing graded submission BEFORE rendering quiz
+  const { data: existing } = await supabase
+    .from('submissions')
+    .select('id')
+    .eq('assignment_id', assignmentId)
+    .eq('student_id', user.id)
+    .eq('status', 'graded')
+    .maybeSingle()
+
+  if (existing) redirect(`/student/results/${existing.id}`)
+
   const payload = await getTakePayload(assignmentId)
 
-  async function submit(formData: FormData) {
-    'use server'
-    const answers: Record<string, string> = {}
-    for (const q of payload.questions) {
-      const v = formData.get(q.id)
-      if (typeof v === 'string') answers[q.id] = v
-    }
-    const res = await submitAssessment({ assignmentId, answers })
-    redirect(`/student/results/${res.submissionId}`)
-  }
-
   return (
-    <main style={{ padding: 24 }}>
-      <h1>{payload.title}</h1>
-      <form action={submit}>
-        {payload.questions.map((q) => (
-          <fieldset key={q.id} style={{ marginBottom: 16, border: 'none' }}>
-            <legend>
-              {q.prompt} ({q.points} pt{q.points === 1 ? '' : 's'}
-              {q.is_bonus ? ', bonus' : ''})
-            </legend>
-            {q.kind === 'num' ? (
-              <input type="number" name={q.id} step="any" />
-            ) : (
-              (q.options ?? []).map((opt) => (
-                <label key={opt} style={{ display: 'block' }}>
-                  <input type="radio" name={q.id} value={opt} /> {opt}
-                </label>
-              ))
-            )}
-          </fieldset>
-        ))}
-        <button type="submit">Submit</button>
-      </form>
-    </main>
+    <div>
+      <header className="feu-header">
+        <div className="feu-crest">FEU</div>
+        <div className="feu-inst">Far Eastern University · Manila</div>
+        <h1>{payload.title}</h1>
+        <p>{payload.type} · Answer every item, then Submit.</p>
+      </header>
+      <div className="feu-wrap">
+        <TakeForm assignmentId={assignmentId} questions={payload.questions} title={payload.title} />
+      </div>
+    </div>
   )
 }
