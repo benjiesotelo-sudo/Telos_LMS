@@ -7,7 +7,6 @@ import type { Question } from '@/lib/types'
 interface Props {
   assignmentId: string
   questions: Question[]
-  title: string
 }
 
 const STORAGE_KEY = (id: string) => `telos-take-${id}`
@@ -68,7 +67,7 @@ export default function TakeForm({ assignmentId, questions }: Props) {
             <input
               type="text"
               inputMode="numeric"
-              pattern="-?\d*"
+              pattern={"-?\\d*"}
               className="feu-input"
               style={{ width: 200 }}
               value={answers[q.id] ?? ''}

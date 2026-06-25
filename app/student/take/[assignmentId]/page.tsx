@@ -13,7 +13,9 @@ export default async function TakePage({
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect('/login')
 
-  // Check for existing graded submission BEFORE rendering quiz
+  const payload = await getTakePayload(assignmentId)
+
+  // Check for existing graded submission AFTER window gate (getTakePayload enforces opens_at/closes_at)
   const { data: existing } = await supabase
     .from('submissions')
     .select('id')
@@ -24,8 +26,6 @@ export default async function TakePage({
 
   if (existing) redirect(`/student/results/${existing.id}`)
 
-  const payload = await getTakePayload(assignmentId)
-
   return (
     <div>
       <header className="feu-header">
@@ -35,7 +35,7 @@ export default async function TakePage({
         <p>{payload.type} · Answer every item, then Submit.</p>
       </header>
       <div className="feu-wrap">
-        <TakeForm assignmentId={assignmentId} questions={payload.questions} title={payload.title} />
+        <TakeForm assignmentId={assignmentId} questions={payload.questions} />
       </div>
     </div>
   )
