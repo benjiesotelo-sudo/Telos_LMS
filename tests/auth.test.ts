@@ -1,5 +1,7 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach, beforeAll } from 'vitest'
 import { gateRoute } from '@/lib/auth/gateRoute'
+import { signInAs, clearTestUser } from '@/tests/helpers/auth'
+import { createUser, seedCourse, seedPeriod } from '@/tests/helpers/fixtures'
 
 describe('gateRoute (pure helper)', () => {
   it('unauthenticated user on a protected area -> /login', () => {
@@ -47,5 +49,30 @@ describe('gateRoute (pure helper)', () => {
 
   it('a non-active account already on /holding is NOT bounced', () => {
     expect(gateRoute({ role: 'student', status: 'pending' }, '/holding')).toBeNull()
+  })
+})
+
+afterEach(clearTestUser)
+
+describe('auth integration (self-provisioned instructor)', () => {
+  const u = Date.now()
+  const instrEmail = `instr-${u}@telos.test`
+  const instrPass = 'Instr-pass-123!'
+
+  beforeAll(async () => {
+    await createUser({
+      role: 'instructor',
+      email: instrEmail,
+      password: instrPass,
+      fullName: 'Auth Test Instructor',
+    })
+  })
+
+  it('the self-provisioned instructor can sign in', async () => {
+    const { client, accessToken } = await signInAs(instrEmail, instrPass)
+    expect(accessToken).toBeTruthy()
+    const { data, error } = await client.auth.getUser()
+    expect(error).toBeNull()
+    expect(data.user?.email).toBe(instrEmail)
   })
 })
