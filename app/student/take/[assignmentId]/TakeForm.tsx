@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { submitAssessment } from '@/app/actions/submitAssessment'
 import type { Question } from '@/lib/types'
+import { isValidNumericInput } from '@/lib/utils/numeric'
 
 interface Props {
   assignmentId: string
@@ -71,7 +72,7 @@ export default function TakeForm({ assignmentId, questions }: Props) {
               className="feu-input"
               style={{ width: 200 }}
               value={answers[q.id] ?? ''}
-              onChange={(e) => handleChange(q.id, e.target.value)}
+              onChange={(e) => { if (isValidNumericInput(e.target.value)) handleChange(q.id, e.target.value) }}
               placeholder="your answer"
             />
           ) : (
