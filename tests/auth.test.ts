@@ -1,7 +1,9 @@
 import { describe, it, expect, afterEach, beforeAll } from 'vitest'
 import { gateRoute } from '@/lib/auth/gateRoute'
-import { signInAs, clearTestUser } from '@/tests/helpers/auth'
+import { signInAs, setTestUser, clearTestUser } from '@/tests/helpers/auth'
 import { createUser, seedCourse, seedPeriod } from '@/tests/helpers/fixtures'
+import { enrollStudent } from '@/app/actions/enrollStudent'
+import { createAdminClient } from '@/lib/supabase/server'
 
 describe('gateRoute (pure helper)', () => {
   it('unauthenticated user on a protected area -> /login', () => {
@@ -74,5 +76,55 @@ describe('auth integration (self-provisioned instructor)', () => {
     const { data, error } = await client.auth.getUser()
     expect(error).toBeNull()
     expect(data.user?.email).toBe(instrEmail)
+  })
+})
+
+describe('enrollStudent (instructor creates an invite link)', () => {
+  const u = Date.now() + 1
+  const instrEmail = `enroll-instr-${u}@telos.test`
+  const instrPass = 'Enroll-pass-123!'
+  let instructorId: string
+  let courseId: string
+  let periodId: string
+
+  beforeAll(async () => {
+    const instr = await createUser({
+      role: 'instructor',
+      email: instrEmail,
+      password: instrPass,
+      fullName: 'Enroll Instructor',
+    })
+    instructorId = instr.id
+    courseId = (await seedCourse({ instructorId, code: 'AMS0011', title: 'Algebra & Trig' })).id
+    periodId = (await seedPeriod({ courseId, instructorId, label: '1st Semester' })).id
+  })
+
+  it('inserts an unconsumed invites row and returns its /invite/[token] absolute URL', async () => {
+    await setTestUser(instrEmail, instrPass)
+    const { inviteUrl } = await enrollStudent({
+      courseId,
+      periodId,
+      email: 'newstudent@telos.test',
+      fullName: 'New Student',
+      studentNumber: '2026-00001',
+    })
+
+    const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
+    expect(inviteUrl.startsWith(`${base}/invite/`)).toBe(true)
+    const token = inviteUrl.slice(`${base}/invite/`.length)
+    expect(token.length).toBeGreaterThan(10)
+
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('invites')
+      .select('email, course_id, period_id, full_name, student_number, consumed_at')
+      .eq('token', token)
+      .single()
+    expect(data?.email).toBe('newstudent@telos.test')
+    expect(data?.course_id).toBe(courseId)
+    expect(data?.period_id).toBe(periodId)
+    expect(data?.full_name).toBe('New Student')
+    expect(data?.student_number).toBe('2026-00001')
+    expect(data?.consumed_at).toBeNull()
   })
 })
