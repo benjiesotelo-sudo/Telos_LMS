@@ -99,3 +99,19 @@ create policy submissions_select on submissions for select
 
 -- assessment_keys + invites: RLS enabled, ZERO permissive policies.
 -- Only the service-role (createAdminClient) can read/write them.
+
+-- Privilege-escalation guard: profiles_write lets a user UPDATE their own row
+-- (id = auth.uid()), and Task 2's GRANT gives authenticated a TABLE-LEVEL UPDATE.
+-- Without this, a student could run UPDATE profiles SET role='admin' on their own
+-- row, then is_admin() returns true and they bypass RLS on every table.
+--
+-- A column-level `revoke update (role, status)` is NOT enough: the table-level
+-- UPDATE grant implicitly covers every column, so the revoke is a no-op while it
+-- stands. We must remove the table-level UPDATE entirely, then re-grant UPDATE on
+-- ONLY the self-service columns. This makes role/status/email/id non-updatable by
+-- anon/authenticated while keeping the legit profile-rename path working.
+-- service_role keeps its own grant and bypasses RLS; the SECURITY DEFINER
+-- handle_new_user trigger runs as table owner, so fixtures/acceptInvite/admin
+-- flows are unaffected.
+revoke update on public.profiles from anon, authenticated;
+grant update (full_name, student_number) on public.profiles to authenticated;

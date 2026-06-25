@@ -121,7 +121,7 @@ describe('cross-instructor isolation', () => {
     expect(data).toEqual([])
   })
 
-  it('instructor A cannot read instructor B assessments (B has none, A sees only own)', async () => {
+  it('instructor B cannot read instructor A assessment (B has none, A sees only own)', async () => {
     const { client } = await signInAs(instrB.email, PW)
     const { data } = await client.from('assessments').select('id').eq('id', assessmentA)
     expect(data).toEqual([])
@@ -169,6 +169,37 @@ describe('answer-key secrecy (service-role only)', () => {
     const { client } = await signInAs(instrA.email, PW)
     const { data } = await client.from('assessment_keys').select('assessment_id').eq('assessment_id', assessmentA)
     expect(data).toEqual([])
+  })
+
+  it('a student client gets 0 rows from invites', async () => {
+    const { client } = await signInAs(studentX.email, PW)
+    const { data } = await client.from('invites').select('token')
+    expect(data).toEqual([])
+  })
+})
+
+describe('privilege escalation is blocked', () => {
+  it('a student cannot self-promote to admin via UPDATE profiles', async () => {
+    const { client } = await signInAs(studentY.email, PW)
+    const { data, error } = await client
+      .from('profiles')
+      .update({ role: 'admin' })
+      .eq('id', studentY.id)
+      .select('id')
+    // Column-level revoke on (role, status) makes this a permission error,
+    // or — depending on the driver — a no-op affecting 0 rows. Either way the
+    // promotion must NOT take effect.
+    expect(error !== null || (data ?? []).length === 0).toBe(true)
+
+    // Re-read via service-role to prove the role is still 'student'.
+    const admin = createAdminClient()
+    const { data: prof, error: profErr } = await admin
+      .from('profiles')
+      .select('role')
+      .eq('id', studentY.id)
+      .single()
+    if (profErr) throw profErr
+    expect(prof.role).toBe('student')
   })
 })
 
