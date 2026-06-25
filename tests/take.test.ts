@@ -145,4 +145,49 @@ describe('submitAssessment', () => {
       submitAssessment({ assignmentId, answers: nonBonusAnswers }),
     ).rejects.toThrow(/not open/i)
   })
+
+  it('grades an ALL-BONUS assessment (possible=0) as score 0, not NaN', async () => {
+    // total_points must equal the sum of NON-bonus points; all bonus => 0.
+    const allBonus: AssessmentImport = {
+      title: 'All Bonus Activity',
+      type: 'activity',
+      total_points: 0,
+      questions: [
+        {
+          id: 'q1',
+          kind: 'mcq',
+          prompt: 'Pick the right one',
+          points: 5,
+          is_bonus: true,
+          options: ['alpha', 'beta', 'gamma'],
+        },
+      ],
+      answer_key: {
+        q1: { value: 'beta', points: 5, is_bonus: true },
+      },
+    }
+
+    await setTestUser(INSTRUCTOR_EMAIL, PASSWORD)
+    const { assessmentId: bonusAssessmentId } = await importAssessment(allBonus)
+    const { id: assignmentId } = await seedAssignment({
+      assessmentId: bonusAssessmentId, courseId, periodId, instructorId,
+    })
+    await enrolledStudent('take-allbonus@telos.test')
+
+    await setTestUser('take-allbonus@telos.test', PASSWORD)
+    const res = await submitAssessment({ assignmentId, answers: { q1: 'beta' } })
+    expect(res.earned).toBe(5)
+    expect(res.possible).toBe(0)
+
+    const admin = (await import('@/lib/supabase/server')).createAdminClient()
+    const { data: sub } = await admin
+      .from('submissions')
+      .select('earned, possible, score')
+      .eq('id', res.submissionId)
+      .single()
+    expect(sub!.earned).toBe(5)
+    expect(sub!.possible).toBe(0)
+    expect(sub!.score).toBe(0)
+    expect(Number.isNaN(Number(sub!.score))).toBe(false)
+  })
 })

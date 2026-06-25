@@ -39,7 +39,9 @@ export async function submitAssessment(
 
   const answerKey = keyRow.answer_key as Record<string, AnswerKeyItem>
   const { earned, possible } = gradeSubmission(answers, answerKey)
-  const score = Math.round((earned / possible) * 10000) / 100
+  // Guard: an all-bonus assessment has possible === 0 (possible excludes bonus);
+  // earned/0 would be NaN and break the numeric score column.
+  const score = possible === 0 ? 0 : Math.round((earned / possible) * 10000) / 100
 
   const { data: inserted, error: iErr } = await admin
     .from('submissions')
