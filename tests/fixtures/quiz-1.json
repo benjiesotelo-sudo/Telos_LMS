@@ -1,0 +1,465 @@
+{
+  "title": "Module 1 Quiz 1",
+  "type": "quiz",
+  "total_points": 30,
+  "questions": [
+    {
+      "id": "q1",
+      "kind": "num",
+      "prompt": "If f(x) = 3x + -5, find f(4).",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q2",
+      "kind": "num",
+      "prompt": "If f(x) = x² − 4x + 1, find f(2).",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q3",
+      "kind": "num",
+      "prompt": "If f(x) = -2x + 7, find f(3).",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q4",
+      "kind": "mcq",
+      "prompt": "Factor x² + 5x + 6.",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "(x + 3)(x − 2)",
+        "(x + 1)(x + 3)",
+        "(x + 3)(x + 2)",
+        "(x − 3)(x − 2)"
+      ]
+    },
+    {
+      "id": "q5",
+      "kind": "mcq",
+      "prompt": "Factor x² + 7x + 12.",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "(x + 2)(x + 4)",
+        "(x + 4)(x + 3)",
+        "(x − 4)(x − 3)",
+        "(x + 4)(x − 3)"
+      ]
+    },
+    {
+      "id": "q6",
+      "kind": "num",
+      "prompt": "Solve x² − 5x + 6 = 0. Enter the LARGER solution.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q7",
+      "kind": "num",
+      "prompt": "Solve x² + 1x − 6 = 0. Enter the LARGER solution.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q8",
+      "kind": "num",
+      "prompt": "Find the x-coordinate of the vertex of f(x) = x² − 4x + 3.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q9",
+      "kind": "num",
+      "prompt": "Find the x-coordinate of the vertex of f(x) = x² + 2x − 8.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q10",
+      "kind": "num",
+      "prompt": "Find the slope of the line through (1, 2) and (3, 8).",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q11",
+      "kind": "num",
+      "prompt": "Find the slope of the line through (0, 1) and (2, 5).",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q12",
+      "kind": "num",
+      "prompt": "Find the discriminant (b² − 4ac) of 1x² + -4x + 4.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q13",
+      "kind": "num",
+      "prompt": "Find the discriminant (b² − 4ac) of 1x² + 1x + 1.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q14",
+      "kind": "mcq",
+      "prompt": "How many real solutions does 1x² + 3x + 5 = 0 have?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "Two real solutions",
+        "Cannot be determined",
+        "No real solutions",
+        "One real solution"
+      ]
+    },
+    {
+      "id": "q15",
+      "kind": "mcq",
+      "prompt": "How many real solutions does 2x² + -7x + 3 = 0 have?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "No real solutions",
+        "Two real solutions",
+        "One real solution",
+        "Cannot be determined"
+      ]
+    },
+    {
+      "id": "q16",
+      "kind": "num",
+      "prompt": "Solve the system y = 2x + 1 and y = -1x + 7. Enter the x-value.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q17",
+      "kind": "num",
+      "prompt": "Solve the system y = 1x + 2 and y = 3x + -4. Enter the x-value.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q18",
+      "kind": "num",
+      "prompt": "Demand P = 100 − 2Q, Supply P = 20 + 2Q. Find equilibrium Q.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q19",
+      "kind": "num",
+      "prompt": "Demand P = 50 − 1Q, Supply P = 10 + 1Q. Find equilibrium Q.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q20",
+      "kind": "num",
+      "prompt": "Revenue R(x) = −x² + 60x. Find x that maximizes revenue.",
+      "points": 1,
+      "is_bonus": false
+    },
+    {
+      "id": "q21",
+      "kind": "mcq",
+      "prompt": "What is the slope of a line perpendicular to y = 2x + 1?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "1/2",
+        "2",
+        "-2",
+        "-1/2"
+      ]
+    },
+    {
+      "id": "q22",
+      "kind": "mcq",
+      "prompt": "What is the domain of f(x) = 1/(x − 3)?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "All real numbers except x = 3",
+        "All real numbers",
+        "x ≠ 0",
+        "x ≥ 3"
+      ]
+    },
+    {
+      "id": "q23",
+      "kind": "mcq",
+      "prompt": "What is the range of f(x) = x² + 4?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "All real numbers",
+        "y ≥ 0",
+        "y ≥ 4",
+        "y ≤ 4"
+      ]
+    },
+    {
+      "id": "q24",
+      "kind": "mcq",
+      "prompt": "Write x² + 6x + 5 in vertex form.",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "(x + 6)² − 4",
+        "(x − 3)² − 4",
+        "(x + 3)² + 4",
+        "(x + 3)² − 4"
+      ]
+    },
+    {
+      "id": "q25",
+      "kind": "mcq",
+      "prompt": "What is the solution to x² − 1x − 6 > 0?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "x < -2 or x > 3",
+        "No solution",
+        "-2 < x < 3",
+        "All real numbers"
+      ]
+    },
+    {
+      "id": "q26",
+      "kind": "mcq",
+      "prompt": "Where do y = x² and y = 1x + 2 intersect?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "(-1, -1) and (2, 2)",
+        "They do not intersect",
+        "(-1, 1) and (2, 4)",
+        "(0, 0) and (2, 4)"
+      ]
+    },
+    {
+      "id": "q27",
+      "kind": "mcq",
+      "prompt": "The graph of f(x) = x² + 2x: which describes it?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "Opens upward, has a minimum",
+        "Opens downward, has a minimum",
+        "Opens upward, has a maximum",
+        "Opens downward, has a maximum"
+      ]
+    },
+    {
+      "id": "q28",
+      "kind": "mcq",
+      "prompt": "What is the domain of f(x) = 1/(x − 5)?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "All real numbers except x = 5",
+        "x ≠ 0",
+        "x ≥ 5",
+        "All real numbers"
+      ]
+    },
+    {
+      "id": "q29",
+      "kind": "mcq",
+      "prompt": "For y < 2x + 1, is the boundary line solid or dashed?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "Solid (boundary included)",
+        "There is no boundary line",
+        "It depends on the test point",
+        "Dashed (boundary not included)"
+      ]
+    },
+    {
+      "id": "q30",
+      "kind": "mcq",
+      "prompt": "Which point is in  y ≥ x  and  y ≤ 4 ?",
+      "points": 1,
+      "is_bonus": false,
+      "options": [
+        "(−2, −3)",
+        "(0, 2)",
+        "(3, 1)",
+        "(5, 6)"
+      ]
+    },
+    {
+      "id": "q31",
+      "kind": "num",
+      "prompt": "BONUS (5 pts). A shop's daily revenue is R(x) = x(50 − x), where x is the price per item. Because this parabola opens downward it has a maximum. Find the MAXIMUM DAILY REVENUE (the value of R at its peak). Enter a single number.",
+      "points": 5,
+      "is_bonus": true
+    }
+  ],
+  "answer_key": {
+    "q1": {
+      "value": "7",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q2": {
+      "value": "-3",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q3": {
+      "value": "1",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q4": {
+      "value": "(x + 3)(x + 2)",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q5": {
+      "value": "(x + 4)(x + 3)",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q6": {
+      "value": "3",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q7": {
+      "value": "2",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q8": {
+      "value": "2",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q9": {
+      "value": "-1",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q10": {
+      "value": "3",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q11": {
+      "value": "2",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q12": {
+      "value": "0",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q13": {
+      "value": "-3",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q14": {
+      "value": "No real solutions",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q15": {
+      "value": "Two real solutions",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q16": {
+      "value": "2",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q17": {
+      "value": "3",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q18": {
+      "value": "20",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q19": {
+      "value": "20",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q20": {
+      "value": "30",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q21": {
+      "value": "-1/2",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q22": {
+      "value": "All real numbers except x = 3",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q23": {
+      "value": "y ≥ 4",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q24": {
+      "value": "(x + 3)² − 4",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q25": {
+      "value": "x < -2 or x > 3",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q26": {
+      "value": "(-1, 1) and (2, 4)",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q27": {
+      "value": "Opens upward, has a minimum",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q28": {
+      "value": "All real numbers except x = 5",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q29": {
+      "value": "Dashed (boundary not included)",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q30": {
+      "value": "(0, 2)",
+      "points": 1,
+      "is_bonus": false
+    },
+    "q31": {
+      "value": "625",
+      "points": 5,
+      "is_bonus": true
+    }
+  }
+}
