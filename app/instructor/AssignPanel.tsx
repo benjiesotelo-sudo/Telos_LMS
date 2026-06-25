@@ -35,16 +35,77 @@ export function AssignPanel({ courseId, periodId }: { courseId: string; periodId
   }
 
   return (
-    <section aria-labelledby="assign-h">
-      <h2 id="assign-h">Assign to class</h2>
-      <input aria-label="Assessment id" value={assessmentId} onChange={(e) => setAssessmentId(e.target.value)} placeholder="Assessment id" />
-      <input aria-label="Person in charge" value={pic} onChange={(e) => setPic(e.target.value)} placeholder="Person in charge (PIC)" />
-      <label>Opens<input aria-label="Opens at" type="datetime-local" value={opensAt} onChange={(e) => setOpensAt(e.target.value)} /></label>
-      <label>Closes<input aria-label="Closes at" type="datetime-local" value={closesAt} onChange={(e) => setClosesAt(e.target.value)} /></label>
-      <button type="button" onClick={onAssign} disabled={busy || !assessmentId.trim()}>
-        {busy ? 'Assigning...' : 'Assign'}
-      </button>
-      {msg && <p role="status">{msg}</p>}
+    <section aria-labelledby="assign-h" className="feu-card">
+      <h2 id="assign-h" style={{ fontSize: 16, marginBottom: 14, color: 'var(--green)' }}>
+        Assign to Class
+      </h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <label className="feu-label" htmlFor="assign-id">Assessment ID</label>
+          <input
+            id="assign-id"
+            aria-label="Assessment id"
+            className="feu-input"
+            value={assessmentId}
+            onChange={(e) => setAssessmentId(e.target.value)}
+            placeholder="Assessment id"
+          />
+        </div>
+        <div>
+          <label className="feu-label" htmlFor="assign-pic">Person in Charge</label>
+          <input
+            id="assign-pic"
+            aria-label="Person in charge"
+            className="feu-input"
+            value={pic}
+            onChange={(e) => setPic(e.target.value)}
+            placeholder="Person in charge (PIC)"
+          />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label className="feu-label" htmlFor="assign-opens">Opens At</label>
+            <input
+              id="assign-opens"
+              aria-label="Opens at"
+              className="feu-input"
+              type="datetime-local"
+              value={opensAt}
+              onChange={(e) => setOpensAt(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="feu-label" htmlFor="assign-closes">Closes At</label>
+            <input
+              id="assign-closes"
+              aria-label="Closes at"
+              className="feu-input"
+              type="datetime-local"
+              value={closesAt}
+              onChange={(e) => setClosesAt(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <button
+          type="button"
+          className="feu-btn-gold"
+          onClick={onAssign}
+          disabled={busy || !assessmentId.trim()}
+        >
+          {busy ? 'Assigning...' : 'Assign'}
+        </button>
+      </div>
+      {msg && (
+        <p
+          role="status"
+          className={msg.startsWith('Assign failed') ? 'feu-error' : 'feu-muted'}
+          style={{ marginTop: 10 }}
+        >
+          {msg}
+        </p>
+      )}
     </section>
   )
 }

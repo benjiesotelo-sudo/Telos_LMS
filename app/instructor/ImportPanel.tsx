@@ -23,19 +23,40 @@ export function ImportPanel() {
   }
 
   return (
-    <section aria-labelledby="import-h">
-      <h2 id="import-h">Import assessment</h2>
+    <section aria-labelledby="import-h" className="feu-card">
+      <h2 id="import-h" style={{ fontSize: 16, marginBottom: 14, color: 'var(--green)' }}>
+        Import Assessment
+      </h2>
+      <label className="feu-label" htmlFor="import-json">Assessment JSON</label>
       <textarea
+        id="import-json"
         aria-label="Assessment JSON"
+        className="feu-input"
         rows={8}
         value={raw}
         onChange={(e) => setRaw(e.target.value)}
-        placeholder='Paste AssessmentImport JSON'
+        placeholder="Paste AssessmentImport JSON"
+        style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: 13 }}
       />
-      <button type="button" onClick={onImport} disabled={busy || !raw.trim()}>
-        {busy ? 'Importing...' : 'Import'}
-      </button>
-      {msg && <p role="status">{msg}</p>}
+      <div style={{ marginTop: 12 }}>
+        <button
+          type="button"
+          className="feu-btn-gold"
+          onClick={onImport}
+          disabled={busy || !raw.trim()}
+        >
+          {busy ? 'Importing...' : 'Import'}
+        </button>
+      </div>
+      {msg && (
+        <p
+          role="status"
+          className={msg.startsWith('Import failed') ? 'feu-error' : 'feu-muted'}
+          style={{ marginTop: 10 }}
+        >
+          {msg}
+        </p>
+      )}
     </section>
   )
 }

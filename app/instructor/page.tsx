@@ -9,7 +9,16 @@ export default async function InstructorPage() {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) {
-    return <main><p>Not signed in.</p></main>
+    return (
+      <>
+        <header className="feu-header">
+          <div className="feu-crest">T</div>
+          <p className="feu-inst">Far Eastern University · Manila</p>
+          <h1>Instructor</h1>
+        </header>
+        <div className="feu-wrap"><p className="feu-muted">Not signed in.</p></div>
+      </>
+    )
   }
 
   const { data: course } = await supabase
@@ -45,18 +54,26 @@ export default async function InstructorPage() {
   }))
 
   return (
-    <main>
-      <h1>Instructor</h1>
-      <ImportPanel />
-      {course && period ? (
-        <>
-          <EnrollPanel courseId={course.id} periodId={period.id} />
-          <AssignPanel courseId={course.id} periodId={period.id} />
-        </>
-      ) : (
-        <p>Create a course + period to enroll and assign.</p>
-      )}
-      <SubmissionsPanel rows={rows} />
-    </main>
+    <>
+      <header className="feu-header">
+        <div className="feu-crest">T</div>
+        <p className="feu-inst">Far Eastern University · Manila</p>
+        <h1>Instructor</h1>
+      </header>
+      <div className="feu-wrap">
+        <ImportPanel />
+        {course && period ? (
+          <>
+            <EnrollPanel courseId={course.id} periodId={period.id} />
+            <AssignPanel courseId={course.id} periodId={period.id} />
+          </>
+        ) : (
+          <div className="feu-card">
+            <p className="feu-muted">Create a course + period to enroll and assign.</p>
+          </div>
+        )}
+        <SubmissionsPanel rows={rows} />
+      </div>
+    </>
   )
 }
