@@ -29,6 +29,15 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<{ 
   if (courseErr || !course) throw new Error('Course not found')
   if (!isAdmin && course.instructor_id !== callerId) throw new Error('Not the course owner')
 
+  const { data: period, error: periodErr } = await admin
+    .from('periods')
+    .select('id, course_id')
+    .eq('id', input.periodId)
+    .single()
+  if (periodErr || !period || period.course_id !== input.courseId) {
+    throw new Error('Period does not belong to the course')
+  }
+
   const { data: inserted, error: insErr } = await admin
     .from('assignments')
     .insert({

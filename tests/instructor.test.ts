@@ -45,11 +45,22 @@ describe('createAssignment derives instructor_id from course owner', () => {
     expect(data!.instructor_id).toBe(instructorId)
     expect(data!.pic).toBe('Owner Inst')
   })
+
+  it('rejects a periodId that belongs to a different course', async () => {
+    // second course (same owner) + a period under THAT second course
+    const otherCourse = await seedCourse({ instructorId, code: 'AMS0012', title: 'Other Course' })
+    const foreignPeriod = await seedPeriod({ courseId: otherCourse.id, instructorId, label: '2nd Semester' })
+    await setTestUser(ownerEmail, PW)
+    // courseId = first course, but periodId belongs to the second course -> must reject
+    await expect(
+      createAssignment({ assessmentId, courseId, periodId: foreignPeriod.id, pic: 'Owner Inst' }),
+    ).rejects.toThrow(/period/i)
+  })
 })
 
 describe('submissions roster is RLS-scoped to the owning instructor', () => {
   let aId: string, aEmail: string
-  let bId: string, bEmail: string
+  let bEmail: string
   let aSubmissionId: string, bSubmissionId: string
 
   async function seedGradedSubmission(instructorEmail: string, instructorId: string): Promise<{ submissionId: string }> {
@@ -75,9 +86,9 @@ describe('submissions roster is RLS-scoped to the owning instructor', () => {
     bEmail = `inst-b-${Date.now()}@telos.test`
     const a = await createUser({ role: 'instructor', email: aEmail, password: PW, fullName: 'Inst A' })
     const b = await createUser({ role: 'instructor', email: bEmail, password: PW, fullName: 'Inst B' })
-    aId = a.id; bId = b.id
+    aId = a.id
     aSubmissionId = (await seedGradedSubmission(aEmail, aId)).submissionId
-    bSubmissionId = (await seedGradedSubmission(bEmail, bId)).submissionId
+    bSubmissionId = (await seedGradedSubmission(bEmail, b.id)).submissionId
   })
 
   it('instructor A reads only A submissions, never B', async () => {
