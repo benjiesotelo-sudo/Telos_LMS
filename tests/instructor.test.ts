@@ -3,6 +3,7 @@ import { createAdminClient } from '@/lib/supabase/server'
 import { setTestUser, signInAs } from '@/tests/helpers/auth'
 import { createUser, seedCourse, seedClass, seedAssignment, seedEnrollment } from '@/tests/helpers/fixtures'
 import { importAssessment } from '@/app/actions/importAssessment'
+import { createAssignment } from '@/app/actions/createAssignment'
 import { submitAssessment } from '@/app/actions/submitAssessment'
 import { computeFinal } from '@/lib/grading'
 import type { AssessmentImport, ComponentSubmission, ComponentWeights } from '@/lib/types'
@@ -10,10 +11,7 @@ import type { AssessmentImport, ComponentSubmission, ComponentWeights } from '@/
 const PW = 'Passw0rd!test'
 const DEFAULT_WEIGHTS: ComponentWeights = { activity: 10, quiz: 40, exam: 50 }
 
-// createAssignment still uses courseId/periodId and queries the now-dropped
-// `periods` table. Those tests are being rewritten in Task 8 (createAssignment
-// by class_id). Skip for now to keep the suite green.
-describe.skip('createAssignment derives instructor_id from course owner [Task 8]', () => {
+describe('createAssignment derives instructor_id from course owner [Task 8]', () => {
   let instructorId: string
   let ownerEmail: string
   let assessmentId: string
@@ -38,14 +36,24 @@ describe.skip('createAssignment derives instructor_id from course owner [Task 8]
     assessmentId = imp.assessmentId
   })
 
-  it('sets instructor_id to the course owner', async () => {
-    // TODO Task 8: rewrite to createAssignment({ assessmentId, classId })
-    void instructorId; void classId; void courseId; void assessmentId
+  it('sets instructor_id to the class owner', async () => {
+    await setTestUser(ownerEmail, PW)
+    const { assignmentId } = await createAssignment({ assessmentId, classId })
+    expect(assignmentId).toBeTruthy()
+    const admin = createAdminClient()
+    const { data: row } = await admin
+      .from('assignments')
+      .select('instructor_id')
+      .eq('id', assignmentId)
+      .single()
+    expect(row!.instructor_id).toBe(instructorId)
   })
 
-  it('rejects a classId that belongs to a different course', async () => {
-    // TODO Task 8: rewrite to createAssignment({ assessmentId, classId: foreignClassId })
-    void instructorId; void classId; void courseId; void assessmentId
+  it('rejects a caller who does not own the class', async () => {
+    const otherEmail = `other-inst-${Date.now()}@telos.test`
+    await createUser({ role: 'instructor', email: otherEmail, password: PW, fullName: 'Other Inst' })
+    await setTestUser(otherEmail, PW)
+    await expect(createAssignment({ assessmentId, classId })).rejects.toThrow(/not the class owner/i)
   })
 })
 

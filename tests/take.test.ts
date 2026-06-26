@@ -53,9 +53,7 @@ async function enrolledStudent(email: string) {
   return stu
 }
 
-// getTakePayload still selects course_id/period_id from assignments (columns dropped
-// in 0003_classes_roster). The action is being rewritten in Task 8.
-describe.skip('getTakePayload [Task 8: action selects dropped course_id/period_id columns]', () => {
+describe('getTakePayload [Task 8: action selects dropped course_id/period_id columns]', () => {
   it('returns questions with zero answer fields, for an open assignment', async () => {
     await enrolledStudent('take-get@telos.test')
     const { id: assignmentId } = await seedAssignment({ assessmentId, classId, instructorId })

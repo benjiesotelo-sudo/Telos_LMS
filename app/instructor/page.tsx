@@ -1,6 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
 import { ImportPanel } from '@/app/instructor/ImportPanel'
-import { EnrollPanel } from '@/app/instructor/EnrollPanel'
 import { AssignPanel } from '@/app/instructor/AssignPanel'
 import { SubmissionsPanel, type RosterRow } from '@/app/instructor/SubmissionsPanel'
 import type { ComponentType } from '@/lib/types'
@@ -21,22 +20,12 @@ export default async function InstructorPage() {
     )
   }
 
-  const { data: course } = await supabase
-    .from('courses')
-    .select('id, code, title')
+  const { data: cls } = await supabase
+    .from('classes')
+    .select('id, period, courses(code, title)')
     .order('created_at', { ascending: true })
     .limit(1)
     .maybeSingle()
-
-  const { data: period } = course
-    ? await supabase
-        .from('periods')
-        .select('id, label')
-        .eq('course_id', course.id)
-        .order('created_at', { ascending: true })
-        .limit(1)
-        .maybeSingle()
-    : { data: null }
 
   const { data: subData } = await supabase
     .from('submissions')
@@ -62,14 +51,11 @@ export default async function InstructorPage() {
       </header>
       <div className="feu-wrap">
         <ImportPanel />
-        {course && period ? (
-          <>
-            <EnrollPanel courseId={course.id} periodId={period.id} />
-            <AssignPanel courseId={course.id} periodId={period.id} />
-          </>
+        {cls ? (
+          <AssignPanel classId={cls.id} />
         ) : (
           <div className="feu-card">
-            <p className="feu-muted">Create a course + period to enroll and assign.</p>
+            <p className="feu-muted">Create a course + class to assign assessments.</p>
           </div>
         )}
         <SubmissionsPanel rows={rows} />

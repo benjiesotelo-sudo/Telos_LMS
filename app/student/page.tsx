@@ -11,7 +11,7 @@ export default async function StudentDashboard() {
   // RLS returns only the caller's enrollments.
   const { data: enrollments } = await supabase
     .from('enrollments')
-    .select('course_id, period_id')
+    .select('class_id')
 
   const assignments: {
     id: string
@@ -25,8 +25,7 @@ export default async function StudentDashboard() {
     const { data: rows } = await supabase
       .from('assignments')
       .select('id, opens_at, closes_at, assessments(title, type)')
-      .eq('course_id', e.course_id)
-      .eq('period_id', e.period_id)
+      .eq('class_id', e.class_id)
     for (const r of rows ?? []) {
       const a = r as unknown as {
         id: string

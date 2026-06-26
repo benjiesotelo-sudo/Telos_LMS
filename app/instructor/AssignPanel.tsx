@@ -2,9 +2,8 @@
 import { useState } from 'react'
 import { createAssignment } from '@/app/actions/createAssignment'
 
-export function AssignPanel({ courseId, periodId }: { courseId: string; periodId: string }) {
+export function AssignPanel({ classId }: { classId: string }) {
   const [assessmentId, setAssessmentId] = useState('')
-  const [pic, setPic] = useState('')
   const [opensAt, setOpensAt] = useState('')
   const [closesAt, setClosesAt] = useState('')
   const [msg, setMsg] = useState('')
@@ -16,15 +15,12 @@ export function AssignPanel({ courseId, periodId }: { courseId: string; periodId
     try {
       const res = await createAssignment({
         assessmentId,
-        courseId,
-        periodId,
-        pic,
+        classId,
         opensAt: opensAt ? new Date(opensAt).toISOString() : undefined,
         closesAt: closesAt ? new Date(closesAt).toISOString() : undefined,
       })
       setMsg(`Assigned (${res.assignmentId})`)
       setAssessmentId('')
-      setPic('')
       setOpensAt('')
       setClosesAt('')
     } catch (e) {
@@ -49,17 +45,6 @@ export function AssignPanel({ courseId, periodId }: { courseId: string; periodId
             value={assessmentId}
             onChange={(e) => setAssessmentId(e.target.value)}
             placeholder="Assessment id"
-          />
-        </div>
-        <div>
-          <label className="feu-label" htmlFor="assign-pic">Person in Charge</label>
-          <input
-            id="assign-pic"
-            aria-label="Person in charge"
-            className="feu-input"
-            value={pic}
-            onChange={(e) => setPic(e.target.value)}
-            placeholder="Person in charge (PIC)"
           />
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>

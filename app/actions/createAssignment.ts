@@ -3,9 +3,7 @@ import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export interface CreateAssignmentInput {
   assessmentId: string
-  courseId: string
-  periodId: string
-  pic: string
+  classId: string
   opensAt?: string
   closesAt?: string
   dueDate?: string
@@ -16,36 +14,21 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<{ 
   const { data: auth, error: authErr } = await supabase.auth.getUser()
   if (authErr || !auth.user) throw new Error('Not authenticated')
   const callerId = auth.user.id
-
   const { data: caller } = await supabase.from('profiles').select('role').eq('id', callerId).single()
   const isAdmin = caller?.role === 'admin'
 
   const admin = createAdminClient()
-  const { data: course, error: courseErr } = await admin
-    .from('courses')
-    .select('id, instructor_id')
-    .eq('id', input.courseId)
-    .single()
-  if (courseErr || !course) throw new Error('Course not found')
-  if (!isAdmin && course.instructor_id !== callerId) throw new Error('Not the course owner')
-
-  const { data: period, error: periodErr } = await admin
-    .from('periods')
-    .select('id, course_id')
-    .eq('id', input.periodId)
-    .single()
-  if (periodErr || !period || period.course_id !== input.courseId) {
-    throw new Error('Period does not belong to the course')
-  }
+  const { data: cls, error: clsErr } = await admin
+    .from('classes').select('id, instructor_id').eq('id', input.classId).single()
+  if (clsErr || !cls) throw new Error('Class not found')
+  if (!isAdmin && cls.instructor_id !== callerId) throw new Error('Not the class owner')
 
   const { data: inserted, error: insErr } = await admin
     .from('assignments')
     .insert({
       assessment_id: input.assessmentId,
-      course_id: input.courseId,
-      period_id: input.periodId,
-      instructor_id: course.instructor_id,
-      pic: input.pic,
+      class_id: input.classId,
+      instructor_id: cls.instructor_id,
       opens_at: input.opensAt ?? null,
       closes_at: input.closesAt ?? null,
       due_date: input.dueDate ?? null,
@@ -53,6 +36,5 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<{ 
     .select('id')
     .single()
   if (insErr || !inserted) throw new Error(`Failed to create assignment: ${insErr?.message ?? 'unknown'}`)
-
   return { assignmentId: inserted.id }
 }

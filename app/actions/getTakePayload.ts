@@ -14,7 +14,7 @@ export async function getTakePayload(
   // RLS on assignments only returns rows the caller is enrolled in (or owns).
   const { data: assignment, error: aErr } = await supabase
     .from('assignments')
-    .select('id, assessment_id, course_id, period_id, opens_at, closes_at')
+    .select('id, assessment_id, class_id, opens_at, closes_at')
     .eq('id', assignmentId)
     .single()
   if (aErr || !assignment) throw new Error('Assignment not found or you are not enrolled.')
