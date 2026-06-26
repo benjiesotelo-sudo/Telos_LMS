@@ -55,4 +55,18 @@ describe('registerViaLink', () => {
     await expect(registerViaLink({ token, fullName: 'X', email: `${tag}-exp@x.com`, password: PW, studentNumber: 'SN-X' }))
       .rejects.toThrow(/expired/i)
   })
+
+  it('rejects a revoked link', async () => {
+    const { token } = await instructorWithClassLink()
+    const admin = createAdminClient()
+    await admin.from('enroll_links').update({ revoked_at: new Date().toISOString() }).eq('token', token)
+    await expect(registerViaLink({ token, fullName: 'R', email: `${tag}-rev@x.com`, password: PW, studentNumber: 'SN-R' }))
+      .rejects.toThrow(/revoked/i)
+  })
+
+  it('rejects an empty student number', async () => {
+    const { token } = await instructorWithClassLink()
+    await expect(registerViaLink({ token, fullName: 'E', email: `${tag}-empty@x.com`, password: PW, studentNumber: '' }))
+      .rejects.toThrow(/student number is required/i)
+  })
 })
