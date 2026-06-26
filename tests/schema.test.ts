@@ -131,6 +131,36 @@ describe('0001_init schema + constraints', () => {
   })
 })
 
+describe('0003_classes_roster schema', () => {
+  it('classes table exists with section columns', async () => {
+    const admin = createAdminClient()
+    const { error } = await admin.from('classes')
+      .select('id, instructor_id, course_id, period, section_label, pic').limit(0)
+    expect(error).toBeNull()
+  })
+
+  it('enroll_links table exists', async () => {
+    const admin = createAdminClient()
+    const { error } = await admin.from('enroll_links')
+      .select('id, token, instructor_id, kind, class_id, expires_at, revoked_at').limit(0)
+    expect(error).toBeNull()
+  })
+
+  it('enrollments references class_id, not course_id', async () => {
+    const admin = createAdminClient()
+    const ok = await admin.from('enrollments').select('class_id').limit(0)
+    expect(ok.error).toBeNull()
+    const gone = await admin.from('enrollments').select('course_id').limit(0)
+    expect(gone.error).not.toBeNull()
+  })
+
+  it('periods table is dropped', async () => {
+    const admin = createAdminClient()
+    const { error } = await admin.from('periods').select('id').limit(0)
+    expect(error).not.toBeNull()
+  })
+})
+
 describe('seed.sql pilot scoping', () => {
   it('seeds nothing for the bootstrap instructor on a fresh stack (no out-of-band instructor present)', async () => {
     // The whole run shares ONE `supabase db reset` (vitest.globalSetup), so global

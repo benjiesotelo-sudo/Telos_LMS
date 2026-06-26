@@ -31,14 +31,14 @@ select u.id, 'AMS0011', 'Algebra & Trigonometry'
       where c.instructor_id = u.id and c.code = 'AMS0011'
    );
 
--- Pilot period (Midyear) on the pilot course. Idempotent.
-insert into public.periods (course_id, instructor_id, label)
-select c.id, c.instructor_id, 'Midyear'
+-- Pilot class (Midyear, section 1) on the pilot course. Idempotent.
+insert into public.classes (instructor_id, course_id, period, section_label, pic)
+select c.instructor_id, c.id, 'Midyear', '1', ''
   from public.courses c
   join auth.users u on u.id = c.instructor_id
  where u.email = 'benjiesotelo@gmail.com'
    and c.code = 'AMS0011'
    and not exists (
-     select 1 from public.periods pr
-      where pr.course_id = c.id and pr.label = 'Midyear'
+     select 1 from public.classes cl
+      where cl.course_id = c.id and cl.period = 'Midyear' and cl.section_label = '1'
    );
