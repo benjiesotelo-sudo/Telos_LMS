@@ -54,10 +54,27 @@ describe('listEnrollLinks + revokeEnrollLink', () => {
     expect(rows.length).toBe(1)
   })
 
+  it('excludes expired-but-unrevoked links', async () => {
+    const instr = await createUser({ role: 'instructor', email: `${tag}-exp@x.com`, password: PW, fullName: 'E' })
+    const courseId = (await seedCourse({ instructorId: instr.id, code: `${tag}-EX`, title: 'C' })).id
+    const classId = (await seedClass({ instructorId: instr.id, courseId, period: 'Midyear' })).id
+    await setTestUser(instr.email, PW)
+    const expired = await generateEnrollLink({ kind: 'class', classId })
+    const live = await generateEnrollLink({ kind: 'general' })
+    // force the first link into the past (unrevoked)
+    const admin = createAdminClient()
+    const past = new Date(Date.now() - 86400000).toISOString()
+    await admin.from('enroll_links').update({ expires_at: past }).eq('token', expired.token)
+    const rows = await listEnrollLinks()
+    const tokens = rows.map((r) => r.token)
+    expect(tokens).not.toContain(expired.token)
+    expect(tokens).toContain(live.token)
+  })
+
   it('forbids revoking another instructor\'s link', async () => {
     const owner = await createUser({ role: 'instructor', email: `${tag}-own2@x.com`, password: PW, fullName: 'O' })
     await setTestUser(owner.email, PW)
-    const link = await generateEnrollLink({ kind: 'general' })
+    await generateEnrollLink({ kind: 'general' })
     const rows = await listEnrollLinks()
     const other = await createUser({ role: 'instructor', email: `${tag}-oth2@x.com`, password: PW, fullName: 'T' })
     await setTestUser(other.email, PW)
