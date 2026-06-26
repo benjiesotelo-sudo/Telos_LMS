@@ -143,6 +143,46 @@ export interface SectionStudentRow {
   qp:     number | null
 }
 
+// ---------------------------------------------------------------------------
+// ClassDetail — returned by getClassDetail
+// ---------------------------------------------------------------------------
+
+export interface ClassDetailAssessment {
+  assignmentId: string
+  assessmentId: string
+  title: string
+  type: 'activity' | 'quiz' | 'exam'
+  period: 'midterm' | 'final'
+  active: boolean
+  revealAnswers: boolean
+  opensAt: string | null
+  closesAt: string | null
+  dueDate: string | null
+}
+
+export interface ClassDetailStudent {
+  studentId: string
+  fullName: string
+  studentNumber: string | null
+  email: string
+  status: string
+}
+
+export interface ClassDetail {
+  class: {
+    id: string
+    displayName: string
+    code: string
+    title: string
+    period: string
+    sectionLabel: string
+    pic: string
+    weights: { wtQuiz: number; wtPaper: number; wtExam: number }
+  }
+  assessments: ClassDetailAssessment[]
+  students: ClassDetailStudent[]
+}
+
 /** Full section gradebook returned by getSectionGrades. */
 export interface SectionGrades {
   class: {
