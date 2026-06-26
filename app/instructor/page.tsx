@@ -1,76 +1,45 @@
+import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
-import { ImportPanel } from '@/app/instructor/ImportPanel'
-import { CoursePanel } from '@/app/instructor/CoursePanel'
-import { ClassPanel } from '@/app/instructor/ClassPanel'
-import { AssignPanel } from '@/app/instructor/AssignPanel'
-import { SubmissionsPanel, type RosterRow } from '@/app/instructor/SubmissionsPanel'
-import { EnrollLinksPanel } from '@/app/instructor/EnrollLinksPanel'
-import { PendingPanel } from '@/app/instructor/PendingPanel'
-import { listPics, listClasses } from '@/app/actions/listClasses'
+import { listClasses } from '@/app/actions/listClasses'
 import { listPending } from '@/app/actions/listPending'
-import type { ComponentType } from '@/lib/types'
 
-export default async function InstructorPage() {
+export default async function InstructorDashboard() {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
-  if (!auth.user) {
-    return (
-      <>
-        <header className="feu-header">
-          <div className="feu-crest">T</div>
-          <p className="feu-inst">Far Eastern University · Manila</p>
-          <h1>Instructor</h1>
-        </header>
-        <div className="feu-wrap"><p className="feu-muted">Not signed in.</p></div>
-      </>
-    )
-  }
+  if (!auth.user) redirect('/login')
 
-  const { data: courses } = await supabase
-    .from('courses')
-    .select('id, code')
-    .order('created_at')
-  const pics = await listPics()
-  const classes = await listClasses()
-  const pending = await listPending()
-
-  const { data: subData } = await supabase
-    .from('submissions')
-    .select('id, student_id, earned, possible, score, profiles:student_id(full_name), assignments:assignment_id(assessment:assessment_id(type))')
-    .order('created_at', { ascending: true })
-
-  const rows: RosterRow[] = (subData ?? []).map((s: any) => ({
-    submissionId: s.id,
-    studentId: s.student_id,
-    studentName: s.profiles?.full_name ?? '',
-    type: (s.assignments?.assessment?.type ?? 'activity') as ComponentType,
-    earned: s.earned ?? 0,
-    possible: s.possible ?? 0,
-    score: s.score ?? null,
-  }))
+  const [classes, pending] = await Promise.all([listClasses(), listPending()])
 
   return (
-    <>
-      <header className="feu-header">
-        <div className="feu-crest">T</div>
-        <p className="feu-inst">Far Eastern University · Manila</p>
-        <h1>Instructor</h1>
-      </header>
-      <div className="feu-wrap">
-        <ImportPanel />
-        <CoursePanel />
-        <ClassPanel courses={courses ?? []} pics={pics} />
-        <EnrollLinksPanel classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))} />
-        <PendingPanel rows={pending} />
-        {classes.length > 0 ? (
-          <AssignPanel classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))} />
-        ) : (
-          <div className="feu-card">
-            <p className="feu-muted">Create a course + class to assign assessments.</p>
-          </div>
-        )}
-        <SubmissionsPanel rows={rows} />
+    <div className="feu-page">
+      <h1>Dashboard</h1>
+      <p className="feu-page-sub">Welcome back — here&rsquo;s a quick look at your instructor workspace.</p>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 16, marginTop: 24 }}>
+        <div className="feu-card">
+          <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 6 }}>Classes</p>
+          <p style={{ fontSize: 32, fontWeight: 700, color: 'var(--green)', margin: '0 0 12px' }}>{classes.length}</p>
+          <Link href="/instructor/classes" style={{ fontSize: 13, color: 'var(--green)' }}>Manage classes &rarr;</Link>
+        </div>
+
+        <div className="feu-card">
+          <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 6 }}>Pending registrations</p>
+          <p style={{ fontSize: 32, fontWeight: 700, color: pending.length > 0 ? 'var(--gold-dk)' : 'var(--green)', margin: '0 0 12px' }}>{pending.length}</p>
+          <Link href="/instructor/roster" style={{ fontSize: 13, color: 'var(--green)' }}>Review roster &rarr;</Link>
+        </div>
       </div>
-    </>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 28 }}>
+        <Link href="/instructor/assessments" className="feu-card" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+          <span style={{ fontWeight: 600 }}>Assessments</span>
+          <span className="feu-muted" style={{ marginLeft: 12, fontSize: 13 }}>Import &amp; assign assessments to your classes</span>
+        </Link>
+        <Link href="/instructor/grades" className="feu-card" style={{ textDecoration: 'none', color: 'inherit', display: 'block' }}>
+          <span style={{ fontWeight: 600 }}>Grades</span>
+          <span className="feu-muted" style={{ marginLeft: 12, fontSize: 13 }}>View submissions and computed grades</span>
+        </Link>
+      </div>
+    </div>
   )
 }
