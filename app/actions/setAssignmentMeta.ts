@@ -7,9 +7,11 @@ export interface SetAssignmentMetaInput {
   period?: 'midterm' | 'final'
   active?: boolean
   revealAnswers?: boolean
-  opensAt?: string
-  closesAt?: string
-  dueDate?: string
+  // Date fields are tri-state: undefined = don't touch the column;
+  // null = clear it (set the column to NULL); a string = set it to that value.
+  opensAt?: string | null
+  closesAt?: string | null
+  dueDate?: string | null
 }
 
 export async function setAssignmentMeta(input: SetAssignmentMetaInput): Promise<{ ok: true }> {

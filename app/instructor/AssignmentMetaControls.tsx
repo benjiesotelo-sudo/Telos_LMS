@@ -43,9 +43,12 @@ export function AssignmentMetaControls({ assignment }: AssignmentMetaControlsPro
           active: merged.active,
           revealAnswers: merged.revealAnswers,
           period: merged.period,
-          opensAt: merged.opensAt || undefined,
-          closesAt: merged.closesAt || undefined,
-          dueDate: merged.dueDate || undefined,
+          // Empty string = the user cleared the field → send null to NULL the
+          // column. A non-empty string sets it. (This control manages all three
+          // date fields together, so we always send an explicit value.)
+          opensAt: merged.opensAt === '' ? null : merged.opensAt,
+          closesAt: merged.closesAt === '' ? null : merged.closesAt,
+          dueDate: merged.dueDate === '' ? null : merged.dueDate,
         })
         setStatus('Saved')
         setTimeout(() => setStatus(null), 2000)

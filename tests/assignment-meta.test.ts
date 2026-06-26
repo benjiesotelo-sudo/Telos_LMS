@@ -148,6 +148,45 @@ describe('setAssignmentMeta', () => {
     expect(new Date(data!.closes_at).getTime()).toBeCloseTo(new Date(closesAt).getTime(), -3)
   })
 
+  it('clearing a deadline with null writes NULL; omitting (undefined) leaves it unchanged', async () => {
+    await setTestUser(INSTR_EMAIL, PASSWORD)
+    const { assignmentId } = await createAssignment({
+      assessmentId,
+      classId,
+      period: 'midterm',
+    })
+
+    const admin = (await import('@/lib/supabase/server')).createAdminClient()
+
+    // 1) Set both deadlines.
+    const opensAt = new Date(Date.now() - 60_000).toISOString()
+    const closesAt = new Date(Date.now() + 3_600_000).toISOString()
+    await setAssignmentMeta({ assignmentId, opensAt, closesAt })
+
+    const { data: afterSet } = await admin
+      .from('assignments')
+      .select('opens_at, closes_at')
+      .eq('id', assignmentId)
+      .single()
+    expect(afterSet!.opens_at).not.toBeNull()
+    expect(afterSet!.closes_at).not.toBeNull()
+
+    // 2) Clear opensAt (null) while OMITTING closesAt (undefined).
+    await setAssignmentMeta({ assignmentId, opensAt: null })
+
+    const { data: afterClear } = await admin
+      .from('assignments')
+      .select('opens_at, closes_at')
+      .eq('id', assignmentId)
+      .single()
+
+    // opensAt explicitly cleared → NULL
+    expect(afterClear!.opens_at).toBeNull()
+    // closesAt was omitted (undefined) → unchanged
+    expect(afterClear!.closes_at).not.toBeNull()
+    expect(new Date(afterClear!.closes_at).getTime()).toBeCloseTo(new Date(closesAt).getTime(), -3)
+  })
+
   it('a different instructor is rejected', async () => {
     await setTestUser(INSTR_EMAIL, PASSWORD)
     const { assignmentId } = await createAssignment({
