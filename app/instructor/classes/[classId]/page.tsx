@@ -67,7 +67,7 @@ export default async function ClassDetailPage({
         </p>
         <div style={{ display: 'flex', gap: 12, marginTop: 12 }}>
           <Link
-            href={`/instructor/grades/${classId}`}
+            href={`/instructor/grades?classId=${classId}`}
             style={{
               fontSize: 13,
               color: 'var(--green)',
