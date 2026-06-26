@@ -1,13 +1,10 @@
 'use server'
-import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/server'
+import { assertCanManage } from '@/app/actions/_pendingAuth'
 
 export async function rejectPending(input: { studentId: string }): Promise<{ ok: true }> {
-  const supabase = await createClient()
-  const { data: auth, error } = await supabase.auth.getUser()
-  if (error || !auth.user) throw new Error('Not authenticated')
-  const { data: profile } = await supabase.from('profiles').select('role').eq('id', auth.user.id).single()
-  const isAdmin = profile?.role === 'admin'
-  if (!profile || (profile.role !== 'instructor' && !isAdmin)) throw new Error('Forbidden')
+  // Caller must instruct this student (own a class they're in) or be admin.
+  await assertCanManage(input.studentId)
 
   const admin = createAdminClient()
   const { data: target } = await admin.from('profiles').select('status').eq('id', input.studentId).single()

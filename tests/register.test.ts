@@ -99,4 +99,18 @@ describe('approve / reject pending', () => {
     const { data: gone } = await admin.from('profiles').select('id').eq('id', prof!.id).maybeSingle()
     expect(gone).toBeNull()
   })
+
+  it('reject refuses a student the caller does not instruct (tenant isolation)', async () => {
+    const { token } = await instructorWithClassLink()
+    const email = `${tag}-rej-x@x.com`
+    await registerViaLink({ token, fullName: 'X', email, password: PW, studentNumber: 'SN-REJ-X' })
+    const admin = createAdminClient()
+    const { data: prof } = await admin.from('profiles').select('id').eq('email', email).single()
+    // A different instructor (B) who does not instruct this student.
+    const instrB = await createUser({ role: 'instructor', email: `${tag}-B-${Math.round(performance.now())}@x.com`, password: PW, fullName: 'B' })
+    await setTestUser(instrB.email, PW)
+    await expect(rejectPending({ studentId: prof!.id })).rejects.toThrow()
+    const { data: stillThere } = await admin.from('profiles').select('id').eq('id', prof!.id).maybeSingle()
+    expect(stillThere?.id).toBe(prof!.id)
+  })
 })
