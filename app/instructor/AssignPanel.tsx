@@ -2,7 +2,8 @@
 import { useState } from 'react'
 import { createAssignment } from '@/app/actions/createAssignment'
 
-export function AssignPanel({ classId }: { classId: string }) {
+export function AssignPanel({ classes }: { classes: { id: string; displayName: string }[] }) {
+  const [classId, setClassId] = useState(classes[0]?.id ?? '')
   const [assessmentId, setAssessmentId] = useState('')
   const [opensAt, setOpensAt] = useState('')
   const [closesAt, setClosesAt] = useState('')
@@ -36,6 +37,20 @@ export function AssignPanel({ classId }: { classId: string }) {
         Assign to Class
       </h2>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <label className="feu-label" htmlFor="assign-class">Class (Section)</label>
+          <select
+            id="assign-class"
+            aria-label="Class"
+            className="feu-input"
+            value={classId}
+            onChange={(e) => setClassId(e.target.value)}
+          >
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>{c.displayName}</option>
+            ))}
+          </select>
+        </div>
         <div>
           <label className="feu-label" htmlFor="assign-id">Assessment ID</label>
           <input
@@ -77,7 +92,7 @@ export function AssignPanel({ classId }: { classId: string }) {
           type="button"
           className="feu-btn-gold"
           onClick={onAssign}
-          disabled={busy || !assessmentId.trim()}
+          disabled={busy || !classId || !assessmentId.trim()}
         >
           {busy ? 'Assigning...' : 'Assign'}
         </button>

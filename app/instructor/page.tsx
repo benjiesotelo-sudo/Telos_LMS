@@ -34,13 +34,6 @@ export default async function InstructorPage() {
   const classes = await listClasses()
   const pending = await listPending()
 
-  const { data: cls } = await supabase
-    .from('classes')
-    .select('id, period, courses(code, title)')
-    .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle()
-
   const { data: subData } = await supabase
     .from('submissions')
     .select('id, student_id, earned, possible, score, profiles:student_id(full_name), assignments:assignment_id(assessment:assessment_id(type))')
@@ -69,8 +62,8 @@ export default async function InstructorPage() {
         <ClassPanel courses={courses ?? []} pics={pics} />
         <EnrollLinksPanel classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))} />
         <PendingPanel rows={pending} />
-        {cls ? (
-          <AssignPanel classId={cls.id} />
+        {classes.length > 0 ? (
+          <AssignPanel classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))} />
         ) : (
           <div className="feu-card">
             <p className="feu-muted">Create a course + class to assign assessments.</p>
