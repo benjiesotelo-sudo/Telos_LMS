@@ -1,6 +1,5 @@
 'use client'
 import { useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { generateEnrollLink } from '@/app/actions/generateEnrollLink'
 import { revokeEnrollLink } from '@/app/actions/revokeEnrollLink'
 import type { EnrollLinkRow } from '@/lib/types'
@@ -22,7 +21,6 @@ export function EnrollLinksPanel({
   classes: { id: string; displayName: string }[]
   links: EnrollLinkRow[]
 }) {
-  const router = useRouter()
   const [kind, setKind] = useState<'class' | 'general'>('class')
   const [classId, setClassId] = useState(classes[0]?.id ?? '')
   const [busy, setBusy] = useState(false)
@@ -44,8 +42,8 @@ export function EnrollLinksPanel({
   async function onGenerate() {
     setBusy(true); setMsg('')
     try {
+      // The server action calls refresh() from next/cache, re-rendering this page
       await generateEnrollLink(kind === 'class' ? { kind, classId } : { kind })
-      router.refresh()
     } catch (e) {
       setMsg(`Failed: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
@@ -56,8 +54,8 @@ export function EnrollLinksPanel({
   async function onRevoke(id: string) {
     setRevoking(id); setMsg('')
     try {
+      // The server action calls refresh() from next/cache, re-rendering this page
       await revokeEnrollLink({ id })
-      router.refresh()
     } catch (e) {
       setMsg(`Revoke failed: ${e instanceof Error ? e.message : String(e)}`)
     } finally {

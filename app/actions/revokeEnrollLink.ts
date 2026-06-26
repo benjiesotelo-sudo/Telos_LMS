@@ -1,4 +1,5 @@
 'use server'
+import { refresh } from 'next/cache'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function revokeEnrollLink(input: { id: string }): Promise<{ ok: true }> {
@@ -15,5 +16,6 @@ export async function revokeEnrollLink(input: { id: string }): Promise<{ ok: tru
   if (!isAdmin && link.instructor_id !== auth.user.id) throw new Error('Not the link owner')
   const { error: upErr } = await admin.from('enroll_links').update({ revoked_at: new Date().toISOString() }).eq('id', input.id)
   if (upErr) throw new Error(upErr.message)
+  refresh()
   return { ok: true }
 }

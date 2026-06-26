@@ -1,4 +1,5 @@
 'use server'
+import { refresh } from 'next/cache'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 
 export async function generateEnrollLink(input: {
@@ -33,6 +34,7 @@ export async function generateEnrollLink(input: {
     .single()
   if (insErr || !data) throw new Error(insErr?.message ?? 'Failed to create link')
 
+  refresh()
   const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'http://localhost:3000'
   return { url: `${base}/register/${data.token}`, token: data.token, expiresAt: data.expires_at }
 }
