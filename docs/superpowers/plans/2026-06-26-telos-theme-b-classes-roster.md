@@ -1478,7 +1478,123 @@ git commit -m "feat(register): self-fill registration page via enroll link"
 **Interfaces:**
 - Produces: `public.purge_expired_pending()` SQL function deleting pending profiles whose newest related link has expired.
 
-- [ ] **Step 1: Update `AssignPanel.tsx`** to take a `classes` prop and pass `classId` to `createAssignment` (drop the pic input — inherited from class). Follow the existing AssignPanel structure; replace the course/period selection with a single class `<select>` of `displayName`.
+- [ ] **Step 1: Rewrite `AssignPanel.tsx`** — take a `classes` prop, pick a class via `<select>`, drop the PIC input (now inherited from the class). Full replacement:
+
+```tsx
+'use client'
+import { useState } from 'react'
+import { createAssignment } from '@/app/actions/createAssignment'
+
+export function AssignPanel({ classes }: { classes: { id: string; displayName: string }[] }) {
+  const [classId, setClassId] = useState(classes[0]?.id ?? '')
+  const [assessmentId, setAssessmentId] = useState('')
+  const [opensAt, setOpensAt] = useState('')
+  const [closesAt, setClosesAt] = useState('')
+  const [msg, setMsg] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function onAssign() {
+    setBusy(true)
+    setMsg('')
+    try {
+      const res = await createAssignment({
+        assessmentId,
+        classId,
+        opensAt: opensAt ? new Date(opensAt).toISOString() : undefined,
+        closesAt: closesAt ? new Date(closesAt).toISOString() : undefined,
+      })
+      setMsg(`Assigned (${res.assignmentId})`)
+      setAssessmentId('')
+      setOpensAt('')
+      setClosesAt('')
+    } catch (e) {
+      setMsg(`Assign failed: ${e instanceof Error ? e.message : String(e)}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <section aria-labelledby="assign-h" className="feu-card">
+      <h2 id="assign-h" style={{ fontSize: 16, marginBottom: 14, color: 'var(--green)' }}>
+        Assign to Class
+      </h2>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div>
+          <label className="feu-label" htmlFor="assign-class">Class (Section)</label>
+          <select
+            id="assign-class"
+            aria-label="Class"
+            className="feu-input"
+            value={classId}
+            onChange={(e) => setClassId(e.target.value)}
+          >
+            {classes.map((c) => (
+              <option key={c.id} value={c.id}>{c.displayName}</option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="feu-label" htmlFor="assign-id">Assessment ID</label>
+          <input
+            id="assign-id"
+            aria-label="Assessment id"
+            className="feu-input"
+            value={assessmentId}
+            onChange={(e) => setAssessmentId(e.target.value)}
+            placeholder="Assessment id"
+          />
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+          <div>
+            <label className="feu-label" htmlFor="assign-opens">Opens At</label>
+            <input
+              id="assign-opens"
+              aria-label="Opens at"
+              className="feu-input"
+              type="datetime-local"
+              value={opensAt}
+              onChange={(e) => setOpensAt(e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="feu-label" htmlFor="assign-closes">Closes At</label>
+            <input
+              id="assign-closes"
+              aria-label="Closes at"
+              className="feu-input"
+              type="datetime-local"
+              value={closesAt}
+              onChange={(e) => setClosesAt(e.target.value)}
+            />
+          </div>
+        </div>
+      </div>
+      <div style={{ marginTop: 14 }}>
+        <button
+          type="button"
+          className="feu-btn-gold"
+          onClick={onAssign}
+          disabled={busy || !classId || !assessmentId.trim()}
+        >
+          {busy ? 'Assigning...' : 'Assign'}
+        </button>
+      </div>
+      {msg && (
+        <p
+          role="status"
+          className={msg.startsWith('Assign failed') ? 'feu-error' : 'feu-muted'}
+          style={{ marginTop: 10 }}
+        >
+          {msg}
+        </p>
+      )}
+    </section>
+  )
+}
+```
+
+In `app/instructor/page.tsx`, the existing `<AssignPanel courseId=… periodId=… />` call must change to `<AssignPanel classes={classes} />` where `classes` comes from `listClasses()` (already imported for the other panels). The old `course`/`period` `maybeSingle()` queries that fed the hardcoded single-course block can be removed once all panels read from `listClasses()`.
 
 - [ ] **Step 2: Write the cleanup migration**
 
@@ -1507,7 +1623,23 @@ end $$;
 
 > Note: deletion cascades from `auth.users` → `profiles` → `enrollments`. Schedule via Supabase cron (pg_cron) or call manually from the SQL Editor; document in CONTINUE.md. Add a test in `tests/register.test.ts` that inserts a pending profile with `created_at` 8 days ago, calls `select purge_expired_pending()` via the admin client, and asserts the profile is gone.
 
-- [ ] **Step 3: Update `seed.sql`** to bootstrap the pilot as a Class (course AMS0011 + a `classes` row, period Midyear, section '1') instead of course+period. Mirror the existing instructor-by-email lookup.
+- [ ] **Step 3: Update `seed.sql`** — replace the `periods` insert (lines ~34-44) with a `classes` insert. The course insert stays. Keep it idempotent and instructor-by-email. Replace the period block with:
+
+```sql
+-- Pilot class/section (AMS0011 - 1, Midyear) on the pilot course. Idempotent.
+insert into public.classes (instructor_id, course_id, period, section_label, pic)
+select c.instructor_id, c.id, 'Midyear', '1', ''
+  from public.courses c
+  join auth.users u on u.id = c.instructor_id
+ where u.email = 'benjiesotelo@gmail.com'
+   and c.code = 'AMS0011'
+   and not exists (
+     select 1 from public.classes cl
+      where cl.course_id = c.id and cl.period = 'Midyear' and cl.section_label = '1'
+   );
+```
+
+(The course insert block above it is unchanged. There is no longer a `periods` table, so its insert is removed entirely.)
 
 - [ ] **Step 4: Reset + full suite + build**
 
