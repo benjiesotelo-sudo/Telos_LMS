@@ -84,9 +84,15 @@ then build A→C→D→E continuously, final review, deploy together.
 
 ### Theme A — Identity & Profile + Account Management (enriched)
 - Profile view + logout (both roles); student detail-change requests.
+- **Password management (NEW — surfaced 2026-06-26):** a **change-password** page (logged-in
+  user updates their own password) AND a **reset-password** page that catches the Supabase
+  recovery-email redirect (`type=recovery` token) so the "Forgot password" email flow works
+  end-to-end. Today neither exists, so the recovery email dead-ends on the app with nowhere to
+  set a new password.
 - **Super admin = full account management**: manage BOTH instructor and student accounts —
-  view, **edit details**, **delete**, **manually create** accounts. Strictly behind the
-  super-admin role, server-side guards, service-role ops (respects the escalation guard).
+  view, **edit details**, **delete**, **manually create** accounts, **and reset a user's
+  password**. Strictly behind the super-admin role, server-side guards, service-role ops
+  (respects the escalation guard).
 
 ### Theme C — Course Management Hub + Assessment Management (enriched — high priority per user)
 - **Course hub**: select a course → see **enrolled students + which sections** belong to it.
