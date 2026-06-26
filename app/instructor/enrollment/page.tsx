@@ -6,7 +6,7 @@ import { listEnrollLinks } from '@/app/actions/listEnrollLinks'
 import { EnrollLinksPanel } from '@/app/instructor/EnrollLinksPanel'
 import { PendingPanel } from '@/app/instructor/PendingPanel'
 
-export default async function RosterPage() {
+export default async function EnrollmentPage() {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) redirect('/login')
@@ -15,7 +15,7 @@ export default async function RosterPage() {
 
   return (
     <div className="feu-page">
-      <h1>Roster &amp; Links</h1>
+      <h1>Enrollment</h1>
       <p className="feu-page-sub">Generate enrollment links and manage pending registrations.</p>
 
       <EnrollLinksPanel

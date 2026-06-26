@@ -4,7 +4,8 @@ import { Sidebar } from '@/app/components/Sidebar'
 const BASE_ITEMS = [
   { href: '/instructor', label: 'Dashboard' },
   { href: '/instructor/classes', label: 'Classes' },
-  { href: '/instructor/roster', label: 'Roster & Links' },
+  { href: '/instructor/builder', label: 'Course Builder' },
+  { href: '/instructor/enrollment', label: 'Enrollment' },
   { href: '/instructor/assessments', label: 'Assessments' },
   { href: '/instructor/grades', label: 'Grades' },
   { href: '/instructor/profile', label: 'Profile' },

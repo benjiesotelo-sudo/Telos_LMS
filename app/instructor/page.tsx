@@ -26,7 +26,7 @@ export default async function InstructorDashboard() {
         <div className="feu-card">
           <p style={{ fontSize: 13, color: 'var(--gray)', marginBottom: 6 }}>Pending registrations</p>
           <p style={{ fontSize: 32, fontWeight: 700, color: pending.length > 0 ? 'var(--gold-dk)' : 'var(--green)', margin: '0 0 12px' }}>{pending.length}</p>
-          <Link href="/instructor/roster" style={{ fontSize: 13, color: 'var(--green)' }}>Review roster &rarr;</Link>
+          <Link href="/instructor/enrollment" style={{ fontSize: 13, color: 'var(--green)' }}>Review enrollment &rarr;</Link>
         </div>
       </div>
 
