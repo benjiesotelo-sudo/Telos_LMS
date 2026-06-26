@@ -28,6 +28,43 @@ Tests run against the LOCAL Supabase stack (globalSetup asserts the URL is 127.0
 ## Deploy
 Push to `main` → Vercel rebuilds + redeploys automatically. Cloud DB migrations: `supabase link --project-ref dprrunxkmsavqmbuzkwf` then `supabase db push`. `seed.sql` is run manually in the Supabase SQL Editor — it bootstraps the instructor (looked up by email) + the pilot course/period.
 
+### One-time cloud SQL steps (run in Supabase SQL Editor AFTER `supabase db push` of migrations 0006 + 0007)
+
+> **Prerequisites:** migrations 0003–0007 must be applied (`supabase db push`). If earlier migrations (0003–0005) were already pushed, only 0006 and 0007 are needed.
+
+**Benjie (super-admin)** — skip if you already ran `seed.sql` in the SQL Editor (it does this automatically):
+```sql
+update public.profiles p
+   set role           = 'admin',
+       status         = 'active',
+       prefix         = '',
+       first_name     = 'Benjamin',
+       middle_initial = 'C.',
+       last_name      = 'Sotelo',
+       suffix         = '',
+       student_number = '202601011',
+       full_name      = 'Benjamin C. Sotelo'
+  from auth.users u
+ where u.email = 'benjiesotelo@gmail.com'
+   and p.id = u.id;
+```
+
+**Mamoun (student)** — fill in `<mamoun_email>` before running (do not hardcode student email in the repo):
+```sql
+update public.profiles p
+   set first_name     = 'Mamoun',
+       middle_initial = 'F R',
+       last_name      = 'Bani',
+       prefix         = '',
+       suffix         = '',
+       student_number = '2024046681',
+       full_name      = 'Mamoun F R Bani'
+  from auth.users u
+ where u.email = '<mamoun_email>'
+   and p.id = u.id;
+```
+Replace `<mamoun_email>` with Mamoun's actual login email before executing.
+
 ## Full history lives in the AIS-OS repo (mission control)
 - Plan: `~/Documents/AIS-OS/docs/superpowers/plans/2026-06-25-telos-lms-slice-1.md`
 - Spec: `~/Documents/AIS-OS/docs/superpowers/specs/2026-06-25-telos-lms-design.md`

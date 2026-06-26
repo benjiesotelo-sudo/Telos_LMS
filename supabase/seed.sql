@@ -13,10 +13,18 @@
 --   the instructor up by email and is fully idempotent. NO test users belong here
 --   (integration suites self-provision via tests/helpers/fixtures.ts).
 
--- Ensure the bootstrapped instructor's profile is role=instructor/status=active.
+-- Ensure Benjie's profile is set to super-admin with structured name fields.
 -- NO-OP when the auth user is absent (fresh local stack).
 update public.profiles p
-   set role = 'instructor', status = 'active'
+   set role             = 'admin',
+       status           = 'active',
+       prefix           = '',
+       first_name       = 'Benjamin',
+       middle_initial   = 'C.',
+       last_name        = 'Sotelo',
+       suffix           = '',
+       student_number   = '202601011',
+       full_name        = 'Benjamin C. Sotelo'
   from auth.users u
  where u.email = 'benjiesotelo@gmail.com'
    and p.id = u.id;
