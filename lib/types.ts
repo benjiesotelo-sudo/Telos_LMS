@@ -76,3 +76,10 @@ export interface PendingRow {
   studentNumber: string
   className: string | null
 }
+
+export interface EnrollLinkRow {
+  id: string; token: string; url: string
+  kind: 'class' | 'general'
+  classId: string | null; className: string | null
+  expiresAt: string; createdAt: string
+}
