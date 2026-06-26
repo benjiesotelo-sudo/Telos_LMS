@@ -35,12 +35,14 @@ Push to `main` → Vercel rebuilds + redeploys automatically. Cloud DB migration
 - `createClient()` is **async** — always `await` it. The test-auth seam returns a per-user anon client under VITEST, never the service-role client.
 
 ## Slice 2 backlog (next)
-- Weighted **gradebook** + CSV export
-- Class/roster management + assessments organized by type (homework / quiz / exam)
-- **Server-side** auto-save + cross-device resume (current auto-save is client-side localStorage only)
-- **Timed quiz:** duration-after-start + on-screen countdown + auto-submit-on-timeout
-- Hardening: status enforcement on the data path; transactional `importAssessment`; a BEFORE-UPDATE role trigger on `profiles`; duplicate-invite guard; `middleware`→`proxy` rename (Next 15 deprecation); N+1 student-dashboard query; multi-course defaults
-- Saved Supabase SQL-Editor admin queries: `List Users`, `Clean Test Data`, `Health Check`, `1st Setup`
+**Full agenda + build order:** `docs/superpowers/specs/2026-06-26-telos-slice-2-roadmap.md`
+Build order: **B (classes+roster) → A (profiles/roles) → C (instructor) → D (student) →** E hardening.
+- **Theme B (START HERE):** real classes (course code + title/description, multi-course), per-class period/PIC, batch enrollment via invite link with student self-fill
+- **Theme A:** profile view + logout (both roles), student detail-change requests, self-promote to super admin
+- **Theme C:** instructor dashboard (assessments by type), manage/preview quiz + view correct answers, quiz name/description, quiz timer setting, fast assign-to-class
+- **Theme D:** student dashboard, view classes, view class details (deadlines/timers), pre-quiz screen, live countdown + auto-submit
+- **Theme E (woven in):** server-side auto-save + cross-device resume; status enforcement; transactional `importAssessment`; BEFORE-UPDATE role trigger on `profiles`; duplicate-invite guard; `middleware`→`proxy` rename; N+1 student-dashboard query; saved Supabase admin SQL (`List Users`, `Clean Test Data`, `Health Check`, `1st Setup`)
+- Also pending: weighted **gradebook** + CSV export
 
 ## To continue
 `cd ~/Documents/Telos_LMS`, start a Claude session here, say "continue the Telos_LMS build."
