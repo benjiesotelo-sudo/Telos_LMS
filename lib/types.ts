@@ -77,6 +77,15 @@ export interface PendingRow {
   className: string | null
 }
 
+export interface AdminUserRow {
+  id: string
+  fullName: string
+  email: string
+  role: UserRole
+  status: UserStatus
+  studentNumber: string | null
+}
+
 export interface EnrollLinkRow {
   id: string; token: string; url: string
   kind: 'class' | 'general'
