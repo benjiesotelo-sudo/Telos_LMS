@@ -67,8 +67,8 @@ dashboards render over, so foundation-first is highest-leverage.
 ---
 
 ## Status
-- [ ] Theme B — design spec → plan → build  ← **current**
-- [ ] Theme A
+- [x] Theme B — design spec → plan → build → reviewed (branch `feat/theme-b-classes-roster`, 98/98, ready to merge)
+- [ ] Theme A  ← **next**
 - [ ] Theme C
 - [ ] Theme D
 - [ ] Theme E (woven in)

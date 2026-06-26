@@ -2,12 +2,18 @@
 
 Multi-instructor learning-management system (the "Telos" brand). This is the at-a-glance handoff so any new session picks up fast.
 
-## Status (2026-06-26): Slice 1 LIVE + in pilot use
+## Status (2026-06-26): Slice 1 LIVE + Theme B built on `feat/theme-b-classes-roster` (awaiting merge)
 - **Deployed:** https://telos-lms.vercel.app  (Vercel — auto-deploys on push to `main`).
 - **Backend:** Supabase cloud project `dprrunxkmsavqmbuzkwf`.  (NEVER touch the old `SOTELO_GradeBook` project `lvcdlulyvwbjrwvkmfwt`.)
 - **Instructor login:** benjiesotelo@gmail.com.  Pilot class: AMS0011, period **Midyear**.
-- **Tests:** `npm test` → 74/74.  Production `npm run build` passes.
-- **What works:** instructor imports a JSON assessment → assigns it to a class → enrolls a student (copy-paste invite link) → student logs in, takes it, it auto-grades against a server-only answer key, both see the score. Email/password auth, RLS tenant isolation, client-side localStorage auto-save, single-submission integrity, FEU green/gold design.
+- **Tests:** `npm test` → **98/98** (on the Theme B branch).  Production `npm run build` passes.
+- **What works (Slice 1):** instructor imports a JSON assessment → assigns it to a class → enrolls a student (copy-paste invite link) → student logs in, takes it, it auto-grades against a server-only answer key, both see the score. Email/password auth, RLS tenant isolation, client-side localStorage auto-save, single-submission integrity, FEU green/gold design.
+
+### Theme B — Classes/Sections + Batch Roster (branch `feat/theme-b-classes-roster`, reviewed, ready to merge)
+- **Model:** reusable **Courses** (code/title/description) → **Classes/sections** (course + period + section_label + PIC, shown `AMS0011 - 6A`) that enrollments + assignments now point to. `periods`/`invites` tables dropped; class-based RLS helpers; pilot AMS0011·Midyear backfilled into a class.
+- **New flow:** instructor creates a course + class → generates an **enroll link** (class-join 7d / general 2d, on-demand, live countdown) → student self-registers at **`/register/[token]`** (name/student#/email/password; role forced `student`, `status=pending`) → lands in the instructor's **pending list** → instructor **approves/rejects**. Duplicate guard on email + student number. Migrations `0003`–`0005`.
+- **DEPLOY TODO (cloud):** schedule `select public.purge_expired_pending();` via pg_cron (or a manual SQL-Editor sweep) to purge >7-day-stale pending accounts. Function is `revoke`d from anon/authenticated — service-role/SQL-Editor only.
+- **Deferred follow-ups (non-blocking, from final review):** at approval, add a section-picker in PendingPanel for general-link registrants who joined with no section (currently they activate with no enrollment); add a DB unique index on `profiles.student_number`; tidy swallowed `profiles`-query errors in the actions; scope a couple of remaining cosmetic items (see `docs/superpowers/specs/2026-06-26-telos-theme-b-classes-roster-design.md` + the SDD ledger `.superpowers/sdd/progress.md`).
 
 ## Run it locally
 Prereqs: **Docker Desktop running** + the **Supabase CLI** (`brew install supabase/tap/supabase`).
