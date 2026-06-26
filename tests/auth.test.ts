@@ -21,6 +21,10 @@ describe('gateRoute (pure helper)', () => {
     expect(gateRoute(null, '/invite/x')).toBe('/login')
   })
 
+  it('unauthenticated user on /reset-password -> no redirect (public route)', () => {
+    expect(gateRoute(null, '/reset-password')).toBeNull()
+  })
+
   it('a student is blocked from /instructor and sent to /student', () => {
     expect(gateRoute({ role: 'student', status: 'active' }, '/instructor')).toBe('/student')
     expect(gateRoute({ role: 'student', status: 'active' }, '/instructor/import')).toBe('/student')

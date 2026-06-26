@@ -12,12 +12,13 @@ export async function signInAs(email: string, password: string) {
   })
   if (error) throw error
   const accessToken = data.session!.access_token
-  return { client, accessToken }
+  const refreshToken = data.session!.refresh_token
+  return { client, accessToken, refreshToken }
 }
 
 export async function setTestUser(email: string, password: string) {
-  const { accessToken } = await signInAs(email, password)
-  globalThis.__TELOS_TEST_USER__ = { accessToken }
+  const { accessToken, refreshToken } = await signInAs(email, password)
+  globalThis.__TELOS_TEST_USER__ = { accessToken, refreshToken }
 }
 
 export function clearTestUser() {

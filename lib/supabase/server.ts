@@ -2,7 +2,7 @@ import { createClient as createSupabaseClient } from '@supabase/supabase-js'
 
 declare global {
   // eslint-disable-next-line no-var
-  var __TELOS_TEST_USER__: { accessToken: string } | undefined
+  var __TELOS_TEST_USER__: { accessToken: string; refreshToken?: string } | undefined
 }
 
 export async function createClient() {
@@ -11,7 +11,7 @@ export async function createClient() {
     const headers: Record<string, string> = testUser
       ? { Authorization: `Bearer ${testUser.accessToken}` }
       : {}
-    return createSupabaseClient(
+    const client = createSupabaseClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
@@ -19,6 +19,15 @@ export async function createClient() {
         global: { headers },
       }
     )
+    // Set the full session so auth.updateUser (which checks for a local session)
+    // works in the test environment, not just DB-query paths.
+    if (testUser?.accessToken && testUser.refreshToken) {
+      await client.auth.setSession({
+        access_token: testUser.accessToken,
+        refresh_token: testUser.refreshToken,
+      })
+    }
+    return client
   }
 
   const { cookies } = await import('next/headers')

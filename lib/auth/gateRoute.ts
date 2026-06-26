@@ -5,7 +5,7 @@ export interface GateUser {
   status: UserStatus
 }
 
-const PUBLIC_PREFIXES = ['/login', '/register', '/holding']
+const PUBLIC_PREFIXES = ['/login', '/register', '/holding', '/reset-password']
 
 function homeFor(role: UserRole): string {
   // Slice 1 has only /instructor and /student areas (no /admin route).
