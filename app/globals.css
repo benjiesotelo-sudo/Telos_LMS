@@ -181,3 +181,21 @@ body {
   color: var(--gray);
   font-size: 13px;
 }
+
+/* ── App shell ── */
+.feu-shell { display: flex; min-height: 100vh; }
+.feu-sidebar { width: 232px; flex-shrink: 0; background: var(--green); color: #fff;
+  display: flex; flex-direction: column; padding: 18px 0; border-right: 4px solid var(--gold); }
+.feu-sidebar-brand { font-family: var(--font-marcellus-sc, serif); font-size: 18px; text-align: center;
+  padding: 6px 16px 16px; border-bottom: 1px solid rgba(255,255,255,.18); margin-bottom: 10px; }
+.feu-nav { display: flex; flex-direction: column; gap: 2px; padding: 0 10px; }
+.feu-nav-link { padding: 10px 14px; border-radius: 8px; color: #eaf3ee; font-size: 14px; font-weight: 600; }
+.feu-nav-link:hover { background: rgba(255,255,255,.10); }
+.feu-nav-link.active { background: var(--gold); color: var(--ink); }
+.feu-sidebar-foot { margin-top: auto; padding: 12px 16px; }
+.feu-main { flex: 1; min-width: 0; }
+.feu-page { max-width: 880px; margin: 0 auto; padding: 28px 24px; }
+.feu-page h1 { font-family: var(--font-marcellus-sc, serif); color: var(--green); font-size: 22px; margin-bottom: 4px; }
+.feu-page-sub { color: var(--gray); font-size: 13px; margin-bottom: 20px; }
+@media (max-width: 720px) { .feu-shell { flex-direction: column; } .feu-sidebar { width: 100%; flex-direction: row;
+  border-right: none; border-bottom: 4px solid var(--gold); overflow-x: auto; } .feu-nav { flex-direction: row; } .feu-sidebar-foot { margin: 0; } }
