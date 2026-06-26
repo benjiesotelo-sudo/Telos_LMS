@@ -223,6 +223,37 @@ describe('no client-side submission writes', () => {
   })
 })
 
+describe('enrollment write hardening (0005)', () => {
+  it('a signed-in student cannot self-INSERT an enrollment (RLS denies)', async () => {
+    // studentY is enrolled in classB but NOT in classA; tries to self-enroll in classA.
+    const { client } = await signInAs(studentY.email, PW)
+    const { data, error } = await client
+      .from('enrollments')
+      .insert({ student_id: studentY.id, class_id: classA, status: 'active' })
+      .select('id')
+    // RLS must deny: either an error is returned or zero rows are inserted.
+    expect(error !== null || (data ?? []).length === 0).toBe(true)
+    // Verify via service-role that no enrollment was actually created.
+    const admin = createAdminClient()
+    const { data: leaked } = await admin
+      .from('enrollments')
+      .select('id')
+      .eq('student_id', studentY.id)
+      .eq('class_id', classA)
+    expect((leaked ?? []).length).toBe(0)
+  })
+
+  it('a student can still SELECT their own enrollment', async () => {
+    const { client } = await signInAs(studentX.email, PW)
+    const { data, error } = await client
+      .from('enrollments')
+      .select('class_id')
+      .eq('student_id', studentX.id)
+    expect(error).toBeNull()
+    expect((data ?? []).length).toBeGreaterThan(0)
+  })
+})
+
 describe('enrolled-student READ path', () => {
   it('an enrolled student CAN read their assigned assignment; a non-enrolled student gets 0 rows', async () => {
     const enrolled = await signInAs(studentX.email, PW)

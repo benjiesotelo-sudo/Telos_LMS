@@ -110,9 +110,10 @@ export async function listPending(): Promise<PendingRow[]> {
   // 2. Unplaced pending students: pending profiles with NO enrollment row at all.
   //    (general-link registrants — visible to any instructor per spec). Two-step:
   //    fetch all enrolled student_ids, then keep pending profiles not in that set.
-  const { data: allEnrStudents } = await admin
+  const { data: allEnrStudents, error: enrErr } = await admin
     .from('enrollments')
     .select('student_id')
+  if (enrErr) throw new Error(enrErr.message)
   const enrolledIds = new Set((allEnrStudents ?? []).map((e: any) => e.student_id))
   const { data: allPending, error: upErr } = await admin
     .from('profiles')

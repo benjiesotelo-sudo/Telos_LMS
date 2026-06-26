@@ -6,13 +6,16 @@ export default async function RegisterPage({ params }: { params: Promise<{ token
   const admin = createAdminClient()
   const { data: link } = await admin
     .from('enroll_links')
-    .select('token, kind, class_id, expires_at, revoked_at')
+    .select('token, kind, class_id, instructor_id, expires_at, revoked_at')
     .eq('token', token).single()
 
   const invalid = !link || link.revoked_at || new Date(link!.expires_at).getTime() <= Date.now()
   let sections: { id: string; displayName: string }[] = []
   if (link && link.kind === 'general' && !invalid) {
-    const { data } = await admin.from('classes').select('id, section_label, course:course_id(code)')
+    const { data } = await admin
+      .from('classes')
+      .select('id, section_label, course:course_id(code)')
+      .eq('instructor_id', link.instructor_id)
     sections = (data ?? []).map((c: any) => ({ id: c.id, displayName: `${c.course?.code ?? ''} - ${c.section_label}` }))
   }
 

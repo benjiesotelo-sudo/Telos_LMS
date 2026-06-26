@@ -100,6 +100,20 @@ describe('approve / reject pending', () => {
     expect(gone).toBeNull()
   })
 
+  it('approve rejects an already-active (non-pending) student', async () => {
+    const { instr, classId, token } = await instructorWithClassLink()
+    const email = `${tag}-active-guard@x.com`
+    await registerViaLink({ token, fullName: 'ActiveGuard', email, password: PW, studentNumber: 'SN-ACTIVE-GUARD' })
+    const admin = createAdminClient()
+    const { data: prof } = await admin.from('profiles').select('id').eq('email', email).single()
+    // First approve makes the student active.
+    await setTestUser(instr.email, PW)
+    await approvePending({ studentId: prof!.id })
+    // Second approve attempt must be rejected: student is no longer pending.
+    await setTestUser(instr.email, PW)
+    await expect(approvePending({ studentId: prof!.id })).rejects.toThrow()
+  })
+
   it('reject refuses a student the caller does not instruct (tenant isolation)', async () => {
     const { token } = await instructorWithClassLink()
     const email = `${tag}-rej-x@x.com`

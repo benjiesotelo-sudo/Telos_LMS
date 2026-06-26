@@ -13,8 +13,12 @@ describe('gateRoute (pure helper)', () => {
   it('unauthenticated user on a public route -> no redirect', () => {
     expect(gateRoute(null, '/login')).toBeNull()
     expect(gateRoute(null, '/')).toBeNull()
-    expect(gateRoute(null, '/invite/tok-123')).toBeNull()
     expect(gateRoute(null, '/holding')).toBeNull()
+    expect(gateRoute(null, '/register/abc-123')).toBeNull()
+  })
+
+  it('/invite is no longer a public prefix (route was removed)', () => {
+    expect(gateRoute(null, '/invite/x')).toBe('/login')
   })
 
   it('a student is blocked from /instructor and sent to /student', () => {
