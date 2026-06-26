@@ -33,6 +33,11 @@ describe('admin-users: as admin', () => {
     adminUserId = adminUser.id
     createdIds.push(adminUserId)
 
+    // A second admin so the self-demotion test is NOT also the last admin
+    // (the last-admin guard would otherwise fire first).
+    const admin2 = await createUser({ role: 'admin', email: `${tag}-admin2@x.com`, password: PW, fullName: 'Admin Two' })
+    createdIds.push(admin2.id)
+
     const instrUser = await createUser({ role: 'instructor', email: `${tag}-instr@x.com`, password: PW, fullName: 'Instr User' })
     instructorId = instrUser.id
     createdIds.push(instructorId)
@@ -118,6 +123,39 @@ describe('admin-users: as admin', () => {
     ).rejects.toThrow(/invalid role/i)
   })
 
+  it('adminUpsertUser rejects an admin demoting their OWN admin role (other admins present)', async () => {
+    await setTestUser(adminEmail, PW)
+    await expect(
+      adminUpsertUser({
+        id: adminUserId,
+        email: adminEmail,
+        role: 'instructor',
+        status: 'active',
+        firstName: 'Admin',
+        lastName: 'User',
+      })
+    ).rejects.toThrow(/your own admin role/i)
+
+    // Confirm the caller is still an admin (the guard blocked the demotion).
+    const admin = createAdminClient()
+    const { data: prof } = await admin.from('profiles').select('role').eq('id', adminUserId).single()
+    expect(prof?.role).toBe('admin')
+  })
+
+  it('adminUpsertUser rejects a create with a password shorter than 6 chars', async () => {
+    await setTestUser(adminEmail, PW)
+    await expect(
+      adminUpsertUser({
+        email: `${tag}-shortpw@x.com`,
+        role: 'student',
+        status: 'active',
+        firstName: 'Short',
+        lastName: 'Pw',
+        password: 'abc',
+      })
+    ).rejects.toThrow(/password/i)
+  })
+
   it('adminResetPassword changes the password for a user', async () => {
     await setTestUser(adminEmail, PW)
     const newPw = 'NewPw_456!'
@@ -183,5 +221,42 @@ describe('admin-users: non-admin (instructor) is blocked on every action', () =>
   it('adminResetPassword throws Forbidden for non-admin', async () => {
     await setTestUser(instrEmail, PW)
     await expect(adminResetPassword({ id: 'some-id', newPassword: 'newpass123' })).rejects.toThrow(/forbidden/i)
+  })
+})
+
+describe('admin-users: last-admin lockout guard', () => {
+  it('adminUpsertUser refuses to demote the last/only admin', async () => {
+    const admin = createAdminClient()
+
+    // Clean slate: demote every existing admin so the freshly-seeded one is the
+    // single remaining admin in the system. (Other test files do not create
+    // persistent admins; this isolates the last-admin count deterministically.)
+    const { data: existingAdmins } = await admin.from('profiles').select('id').eq('role', 'admin')
+    for (const a of existingAdmins ?? []) {
+      await admin.from('profiles').update({ role: 'instructor' }).eq('id', a.id)
+    }
+
+    const solo = await createUser({ role: 'admin', email: `${tag}-solo@x.com`, password: PW, fullName: 'Solo Admin' })
+    createdIds.push(solo.id)
+
+    // Sanity: exactly one admin now exists.
+    const { data: admins } = await admin.from('profiles').select('id').eq('role', 'admin')
+    expect((admins ?? []).length).toBe(1)
+
+    await setTestUser(solo.email, PW)
+    await expect(
+      adminUpsertUser({
+        id: solo.id,
+        email: solo.email,
+        role: 'instructor',
+        status: 'active',
+        firstName: 'Solo',
+        lastName: 'Admin',
+      })
+    ).rejects.toThrow(/last admin/i)
+
+    // The solo admin is still an admin (guard blocked the demotion).
+    const { data: prof } = await admin.from('profiles').select('role').eq('id', solo.id).single()
+    expect(prof?.role).toBe('admin')
   })
 })

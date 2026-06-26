@@ -22,7 +22,7 @@ export interface AdminUpsertUserInput {
 }
 
 export async function adminUpsertUser(input: AdminUpsertUserInput): Promise<{ id: string }> {
-  await assertAdmin()
+  const { userId } = await assertAdmin()
 
   if (!VALID_ROLES.includes(input.role)) {
     throw new Error(`Invalid role: "${input.role}". Must be one of: ${VALID_ROLES.join(', ')}`)
@@ -40,6 +40,10 @@ export async function adminUpsertUser(input: AdminUpsertUserInput): Promise<{ id
 
   if (!input.id) {
     // CREATE — use auth.admin.createUser; the handle_new_user trigger materializes the profile.
+    // Pre-check password length for consistency with adminResetPassword.
+    if (input.password && input.password.length < 6) {
+      throw new Error('Password must be at least 6 characters')
+    }
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email: input.email.trim().toLowerCase(),
       password: input.password,
@@ -59,6 +63,21 @@ export async function adminUpsertUser(input: AdminUpsertUserInput): Promise<{ id
     if (createErr || !created.user) throw new Error(createErr?.message ?? 'Failed to create user')
     refresh()
     return { id: created.user.id }
+  }
+
+  // UPDATE path — guard against operational lockout when this edit demotes an admin.
+  // Only relevant when the new role is NOT admin (a demotion away from admin).
+  if (input.role !== 'admin') {
+    const { data: target } = await admin.from('profiles').select('role').eq('id', input.id).single()
+    if (target?.role === 'admin') {
+      // Last-admin guard FIRST: refuse to demote the only remaining admin (would lock
+      // everyone out of admin). Checked before the self-guard so a solo admin demoting
+      // themselves gets the precise "last admin" reason.
+      const { data: admins } = await admin.from('profiles').select('id').eq('role', 'admin')
+      if ((admins ?? []).length <= 1) throw new Error('Cannot remove the last admin')
+      // Self-demotion guard: an admin may not strip their own admin role.
+      if (input.id === userId) throw new Error('You cannot remove your own admin role')
+    }
   }
 
   // UPDATE — update the profile row via the admin client (so role/status changes are allowed).
