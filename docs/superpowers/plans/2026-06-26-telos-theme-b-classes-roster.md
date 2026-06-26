@@ -32,14 +32,16 @@
 
 **Server actions**
 - Create: `app/actions/createCourse.ts`, `app/actions/createClass.ts`, `app/actions/listClasses.ts`, `app/actions/generateEnrollLink.ts`, `app/actions/registerViaLink.ts`, `app/actions/approvePending.ts`, `app/actions/rejectPending.ts`
-- Modify: `app/actions/createAssignment.ts` (course_id+period_id → class_id), `app/actions/enrollStudent.ts` (delete — replaced by link flow)
+- Modify: `app/actions/createAssignment.ts` (course_id+period_id → class_id), `app/actions/getTakePayload.ts` (select `class_id` not `course_id, period_id`)
+- Delete: `app/actions/enrollStudent.ts`, `app/actions/acceptInvite.ts` (old invite flow retired with the `invites` table)
 
 **UI**
 - Create: `app/instructor/CoursePanel.tsx`, `app/instructor/ClassPanel.tsx`, `app/instructor/EnrollLinksPanel.tsx`, `app/instructor/PendingPanel.tsx`, `app/register/[token]/page.tsx`, `app/register/[token]/RegisterForm.tsx`
-- Modify: `app/instructor/page.tsx` (drive off classes), `app/instructor/AssignPanel.tsx` (class picker), delete `app/instructor/EnrollPanel.tsx`
+- Modify: `app/instructor/page.tsx` (drive off classes), `app/instructor/AssignPanel.tsx` (class picker), `app/student/page.tsx` (read `enrollments.class_id` not `course_id/period_id`)
+- Delete: `app/instructor/EnrollPanel.tsx`, `app/invite/[token]/page.tsx` (old invite landing page)
 
 **Tests / fixtures**
-- Modify: `tests/helpers/fixtures.ts` (seedClass replaces seedPeriod; seedEnrollment + seedAssignment take classId), `tests/rls.test.ts`, `tests/schema.test.ts`, `tests/instructor.test.ts`, `tests/take.test.ts`, `tests/import.test.ts` (any referencing old shape)
+- Modify: `tests/helpers/fixtures.ts` (seedClass replaces seedPeriod; seedEnrollment + seedAssignment take classId), `tests/rls.test.ts`, `tests/schema.test.ts`, `tests/instructor.test.ts`, `tests/take.test.ts`, `tests/import.test.ts`, `tests/auth.test.ts` (delete the `enrollStudent` + `acceptInvite` describe blocks)
 - Create: `tests/classes.test.ts`, `tests/enroll-links.test.ts`, `tests/register.test.ts`
 
 **Bootstrap**
@@ -336,6 +338,15 @@ const assignmentA = (await seedAssignment({ assessmentId, classId: classA, instr
 ```
 
 Update the imports line in each file: remove `seedPeriod`, add `seedClass`.
+
+- [ ] **Step 2b: Strip the retired invite/enroll blocks from `tests/auth.test.ts`**
+
+`tests/auth.test.ts` tests the OLD flow that this theme deletes. Remove:
+- the imports `seedPeriod`, `enrollStudent` (`@/app/actions/enrollStudent`), `acceptInvite` (`@/app/actions/acceptInvite`);
+- the entire `describe('enrollStudent …')` block (≈ lines 83–131);
+- the entire `describe('acceptInvite …')` block (≈ lines 133–213).
+
+Keep the `gateRoute` pure-helper tests (top of the file) intact — they don't touch the schema. After editing, the file imports only what the remaining `gateRoute` tests use (`createUser`, `seedCourse` may become unused — drop them if so to satisfy lint).
 
 - [ ] **Step 3: Run the full suite**
 
@@ -981,15 +992,16 @@ git commit -m "feat(actions): approve/reject pending registrants"
 
 ---
 
-### Task 8: Repoint `createAssignment`; remove `enrollStudent`
+### Task 8: Repoint `createAssignment` + reads; retire the old invite flow
 
 **Files:**
-- Modify: `app/actions/createAssignment.ts`
-- Delete: `app/actions/enrollStudent.ts`
-- Test: `tests/instructor.test.ts` (update assignment test to class_id)
+- Modify: `app/actions/createAssignment.ts`, `app/actions/getTakePayload.ts`, `app/student/page.tsx`
+- Delete: `app/actions/enrollStudent.ts`, `app/actions/acceptInvite.ts`, `app/invite/[token]/page.tsx`
+- Test: `tests/instructor.test.ts` (update assignment test to class_id); `tests/take.test.ts` must stay green after the getTakePayload repoint.
 
 **Interfaces:**
 - Produces: `createAssignment({assessmentId, classId, opensAt?, closesAt?, dueDate?}) → {assignmentId}` (pic no longer an input — inherited from class).
+- `getTakePayload` and `app/student/page.tsx` read `class_id` from `assignments`/`enrollments` instead of `course_id`/`period_id`.
 
 - [ ] **Step 1: Update the test first**
 
@@ -1051,24 +1063,42 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<{ 
 }
 ```
 
-- [ ] **Step 4: Delete `enrollStudent.ts`**
+- [ ] **Step 4: Repoint `getTakePayload.ts`**
 
-```bash
-git rm app/actions/enrollStudent.ts
+`getTakePayload.ts` line ~17 selects `'id, assessment_id, course_id, period_id, opens_at, closes_at'` from `assignments`. Those columns no longer exist. Change the select to `'id, assessment_id, class_id, opens_at, closes_at'`. If any later code in that file reads the removed `course_id`/`period_id` from the row, drop those reads (the payload is keyed by `assignment_id`; class context isn't needed to serve questions). Run `npm test -- take` after — expected PASS.
+
+- [ ] **Step 5: Repoint `app/student/page.tsx`**
+
+It currently selects `enrollments.course_id, period_id` (line ~14) and filters assignments by `.eq('course_id', …).eq('period_id', …)` (lines ~28-29). Replace with the class model:
+
+```ts
+const { data: enrollments } = await supabase
+  .from('enrollments')
+  .select('class_id')
+  // …
+// then, for each enrollment, fetch assignments by class:
+  .eq('class_id', e.class_id)
 ```
 
-(If `getTakePayload.ts` or `submitAssessment.ts` join through `assignments.course_id`/`period_id`, repoint those reads to `class_id` now and run `npm test -- take` to confirm green. They select by `assignment_id` so likely unaffected — verify.)
+Remove the `.eq('period_id', …)` filter entirely (assignments are now keyed by `class_id` alone).
 
-- [ ] **Step 5: Run to verify pass**
-
-Run: `npm test`
-Expected: PASS — full suite green.
-
-- [ ] **Step 6: Commit**
+- [ ] **Step 6: Delete the retired modules**
 
 ```bash
-git add app/actions/createAssignment.ts tests/instructor.test.ts
-git commit -m "feat(actions): createAssignment by class_id; remove enrollStudent"
+git rm app/actions/enrollStudent.ts app/actions/acceptInvite.ts app/invite/[token]/page.tsx
+```
+
+(`gateRoute.ts` lists `/invite/` as a public route — harmless dead entry; leave it, or drop the `/invite` case if trivial. Do NOT change gate behavior for other routes.)
+
+- [ ] **Step 7: Run to verify pass + build**
+
+Run: `npm test` (Expected: PASS — full suite green), then `npm run build` (Expected: passes — confirms no dangling imports to the deleted modules).
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add -A
+git commit -m "feat: assign+read by class_id; retire old invite flow"
 ```
 
 ---
