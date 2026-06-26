@@ -1,5 +1,6 @@
 'use server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { refresh } from 'next/cache'
 
 export async function createCourse(input: {
   code: string; title: string; description?: string
@@ -18,5 +19,6 @@ export async function createCourse(input: {
     .select('id')
     .single()
   if (insErr || !data) throw new Error(insErr?.message ?? 'Failed to create course')
+  refresh()
   return { courseId: data.id }
 }

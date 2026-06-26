@@ -1,6 +1,7 @@
 'use server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { assertCanManage } from '@/app/actions/_pendingAuth'
+import { refresh } from 'next/cache'
 
 export async function approvePending(input: { studentId: string; classId?: string }): Promise<{ ok: true }> {
   const { userId, isAdmin } = await assertCanManage(input.studentId)
@@ -36,5 +37,6 @@ export async function approvePending(input: { studentId: string; classId?: strin
         .in('class_id', myClassIds)
     }
   }
+  refresh()
   return { ok: true }
 }

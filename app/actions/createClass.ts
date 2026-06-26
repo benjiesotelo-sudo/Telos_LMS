@@ -1,5 +1,6 @@
 'use server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { refresh } from 'next/cache'
 
 const PERIODS = ['1st Semester', '2nd Semester', 'Midyear', 'Special Course']
 
@@ -32,5 +33,6 @@ export async function createClass(input: {
     .select('id')
     .single()
   if (insErr || !data) throw new Error(insErr?.message ?? 'Failed to create class')
+  refresh()
   return { classId: data.id }
 }

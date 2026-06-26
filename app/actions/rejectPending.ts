@@ -1,6 +1,7 @@
 'use server'
 import { createAdminClient } from '@/lib/supabase/server'
 import { assertCanManage } from '@/app/actions/_pendingAuth'
+import { refresh } from 'next/cache'
 
 export async function rejectPending(input: { studentId: string }): Promise<{ ok: true }> {
   // Caller must instruct this student (own a class they're in) or be admin.
@@ -13,5 +14,6 @@ export async function rejectPending(input: { studentId: string }): Promise<{ ok:
   // Deleting the auth user cascades to profiles + enrollments (FK on delete cascade).
   const { error: delErr } = await admin.auth.admin.deleteUser(input.studentId)
   if (delErr) throw new Error(delErr.message)
+  refresh()
   return { ok: true }
 }
