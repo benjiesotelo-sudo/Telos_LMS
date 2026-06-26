@@ -283,12 +283,15 @@ Each page is its own `feu-page` wrapper with an `<h1>` + `feu-page-sub`. Keep al
 
 ---
 
-## Task 5: No-refresh after mutations
+## Task 5: No-refresh after mutations (server-side `refresh()` — vendored Next pattern)
 
-**Files:** Modify `app/instructor/CoursePanel.tsx`, `app/instructor/ClassPanel.tsx`, `app/instructor/PendingPanel.tsx`.
+**Files:** Modify the MUTATION SERVER ACTIONS: `app/actions/createCourse.ts`, `app/actions/createClass.ts`, `app/actions/approvePending.ts`, `app/actions/rejectPending.ts`.
 
-- [ ] In each, import `useRouter` from `next/navigation`, get `const router = useRouter()`, and after a successful action call add `router.refresh()` so the server-rendered lists (existing classes, pending list, etc.) update without a manual reload. Keep the success message behavior.
-- [ ] **Verify:** `npm run build` passes; manual: create a class → it appears in the Classes list without reloading; approve a pending student → row clears without reload. `npm test` green. Commit `feat(instructor): refresh server data after create/approve (no manual reload)`
+**Vendored Next pattern (confirmed in `node_modules/next/dist/docs/01-app/01-getting-started/07-mutating-data.md`, ~lines 378-416):** after a mutation, call `refresh()` from `next/cache` INSIDE the Server Action — NOT `router.refresh()` from the client. This is how N4's link actions were fixed.
+
+- [ ] In each of the four actions, add `import { refresh } from 'next/cache'` and call `refresh()` right after the successful DB write (before the `return`). This makes the server-rendered lists (existing classes on /instructor/classes, the pending list on /instructor/roster) update without a manual reload — the client panels need NO change (their success message + input-clearing stay as-is).
+- [ ] Do NOT add `useRouter`/`router.refresh()` to any client panel.
+- [ ] **Verify:** `npm run build` passes; manual: create a class → it appears in the Classes list without reloading; approve a pending student → row clears without reload. `npm test` green (the actions' existing tests must still pass — `refresh()` is a no-op under the test runtime or is tolerated; if a test breaks because `refresh()` throws outside a request scope, guard the call or confirm the test still asserts the DB effect). Commit `feat(instructor): server-side refresh after create/approve (no manual reload)`
 
 ---
 

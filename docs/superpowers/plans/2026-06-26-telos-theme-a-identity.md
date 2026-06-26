@@ -27,7 +27,7 @@
 
 ---
 
-## Task A1: `composeFullName` helper + migration (name fields)
+### Task 1: `composeFullName` helper + migration (name fields)
 
 **Files:** Create `lib/name.ts`, `supabase/migrations/0006_profile_name_fields.sql`, `tests/name.test.ts`; extend `tests/schema.test.ts`.
 
@@ -82,7 +82,7 @@ Add schema-test assertions that the 5 columns exist.
 
 ---
 
-## Task A2: `registerViaLink` + RegisterForm collect name parts
+### Task 2: `registerViaLink` + RegisterForm collect name parts
 
 **Files:** Modify `app/actions/registerViaLink.ts`, `app/register/[token]/RegisterForm.tsx`; extend `tests/register.test.ts`.
 
@@ -96,7 +96,7 @@ Add schema-test assertions that the 5 columns exist.
 
 ---
 
-## Task A3: Profile view/edit (both roles)
+### Task 3: Profile view/edit (both roles)
 
 **Files:** Create `app/instructor/ProfileForm.tsx` (shared client form), rewrite `app/instructor/profile/page.tsx` + `app/student/profile/page.tsx`; create `app/actions/updateProfile.ts`; `tests/profile.test.ts`.
 
@@ -109,7 +109,7 @@ Add schema-test assertions that the 5 columns exist.
 
 ---
 
-## Task A4: Password change page + recovery (reset) page + Forgot link
+### Task 4: Password change page + recovery (reset) page + Forgot link
 
 **Files:** Create `app/account/password/page.tsx` + `ChangePasswordForm.tsx`, `app/reset-password/page.tsx` + `ResetPasswordForm.tsx`, `app/actions/updatePassword.ts`, `app/actions/requestPasswordReset.ts`; add a "Forgot password?" control on `app/login/page.tsx`. Update `gateRoute` PUBLIC_PREFIXES to include `/reset-password`.
 
@@ -123,7 +123,7 @@ Add schema-test assertions that the 5 columns exist.
 
 ---
 
-## Task A5: Super-admin account-management module
+### Task 5: Super-admin account-management module
 
 **Files:** Create `app/actions/admin/listUsers.ts`, `adminUpsertUser.ts`, `adminDeleteUser.ts`, `adminResetPassword.ts`; `app/instructor/users/page.tsx` + `UsersPanel.tsx`; add a **Users** sidebar item shown only to admins; `tests/admin-users.test.ts`.
 
@@ -141,7 +141,7 @@ Add schema-test assertions that the 5 columns exist.
 
 ---
 
-## Task A6: Shell renames (Enrollment; Course Builder)
+### Task 6: Shell renames (Enrollment; Course Builder)
 
 **Files:** `app/instructor/layout.tsx` (sidebar ITEMS), move `app/instructor/roster/` → `app/instructor/enrollment/`; create `app/instructor/builder/page.tsx` (CoursePanel + ClassPanel moved here) and trim `app/instructor/classes/page.tsx` to a list only (creation removed; click-through prepared for Theme C class detail).
 
@@ -151,7 +151,7 @@ Add schema-test assertions that the 5 columns exist.
 
 ---
 
-## Task A7: Load real data (Benjie super-admin + Mamoun) — seed + cloud step
+### Task 7: Load real data (Benjie super-admin + Mamoun) — seed + cloud step
 
 **Files:** `supabase/seed.sql` (extend, idempotent); a documented one-time cloud SQL snippet (NOT committed with PII beyond what seed already implies).
 
