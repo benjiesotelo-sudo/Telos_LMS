@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { setGradeOverride } from '@/app/actions/setGradeOverride'
 import type { SectionGrades, SectionAssessmentMeta } from '@/lib/types'
 
@@ -40,7 +39,6 @@ interface OverrideCellProps {
   studentId: string
   assessmentId: string
   classId: string
-  onSaved: () => void
 }
 
 function OverrideCell({
@@ -48,7 +46,6 @@ function OverrideCell({
   studentId,
   assessmentId,
   classId,
-  onSaved,
 }: OverrideCellProps) {
   const [editing, setEditing] = useState(false)
   const [inputVal, setInputVal] = useState('')
@@ -67,8 +64,9 @@ function OverrideCell({
     }
     setSaving(true)
     try {
+      // setGradeOverride calls server-side refresh() (next/cache), which
+      // re-renders this page with the recomputed marks — no client refresh needed.
       await setGradeOverride({ studentId, assessmentId, classId, score: num })
-      onSaved()
     } catch (err) {
       console.error('Grade override failed:', err)
     } finally {
@@ -101,7 +99,12 @@ function OverrideCell({
               e.preventDefault()
               handleSave()
             }
-            if (e.key === 'Escape') setEditing(false)
+            if (e.key === 'Escape') {
+              // Clear first so the blur-triggered handleSave early-returns
+              // on empty input (Escape must cancel, not persist).
+              setInputVal('')
+              setEditing(false)
+            }
           }}
           style={{
             width: 58,
@@ -145,10 +148,7 @@ interface Props {
 }
 
 export function GradeSheet({ grades, classId }: Props) {
-  const router = useRouter()
   const { class: cls, assessments, students } = grades
-
-  const handleSaved = () => router.refresh()
 
   // Sort within each period: quizzes → activities → exams
   const midtermCols = assessments
@@ -393,14 +393,13 @@ export function GradeSheet({ grades, classId }: Props) {
                     </td>
 
                     {/* Midterm assessment cells */}
-                    {midtermCols.map((a, ci) => (
+                    {midtermCols.map((a) => (
                       <OverrideCell
                         key={a.id}
                         value={stu.cells[a.assessmentId] ?? null}
                         studentId={stu.studentId}
                         assessmentId={a.assessmentId}
                         classId={classId}
-                        onSaved={handleSaved}
                       />
                     ))}
 
@@ -422,14 +421,13 @@ export function GradeSheet({ grades, classId }: Props) {
                     </td>
 
                     {/* Final assessment cells */}
-                    {finalCols.map((a, ci) => (
+                    {finalCols.map((a) => (
                       <OverrideCell
                         key={a.id}
                         value={stu.cells[a.assessmentId] ?? null}
                         studentId={stu.studentId}
                         assessmentId={a.assessmentId}
                         classId={classId}
-                        onSaved={handleSaved}
                       />
                     ))}
 

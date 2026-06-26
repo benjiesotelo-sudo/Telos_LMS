@@ -38,7 +38,7 @@ export default async function GradesPage({
         Select a class section to view the FEU grade sheet and enter manual overrides.
       </p>
 
-      <SectionPicker classes={classes} selected={classId} />
+      <SectionPicker key={classId ?? ''} classes={classes} selected={classId} />
 
       {gradesError && (
         <p style={{ color: '#c0392b', fontSize: 13, marginBottom: 16 }}>{gradesError}</p>
