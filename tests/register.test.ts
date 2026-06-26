@@ -4,6 +4,8 @@ import { setTestUser } from '@/tests/helpers/auth'
 import { createUser, seedCourse, seedClass } from '@/tests/helpers/fixtures'
 import { generateEnrollLink } from '@/app/actions/generateEnrollLink'
 import { registerViaLink } from '@/app/actions/registerViaLink'
+import { approvePending } from '@/app/actions/approvePending'
+import { rejectPending } from '@/app/actions/rejectPending'
 
 const PW = 'Test_pw_123!'
 const tag = `reg-${Date.now()}`
@@ -68,5 +70,33 @@ describe('registerViaLink', () => {
     const { token } = await instructorWithClassLink()
     await expect(registerViaLink({ token, fullName: 'E', email: `${tag}-empty@x.com`, password: PW, studentNumber: '' }))
       .rejects.toThrow(/student number is required/i)
+  })
+})
+
+describe('approve / reject pending', () => {
+  it('approve activates the profile and enrollment', async () => {
+    const { instr, classId, token } = await instructorWithClassLink()
+    const email = `${tag}-appr@x.com`
+    await registerViaLink({ token, fullName: 'P', email, password: PW, studentNumber: 'SN-APPR' })
+    const admin = createAdminClient()
+    const { data: prof } = await admin.from('profiles').select('id').eq('email', email).single()
+    await setTestUser(instr.email, PW)
+    await approvePending({ studentId: prof!.id })
+    const { data: after } = await admin.from('profiles').select('status').eq('id', prof!.id).single()
+    expect(after?.status).toBe('active')
+    const { data: enr } = await admin.from('enrollments').select('status').eq('student_id', prof!.id).single()
+    expect(enr?.status).toBe('active')
+  })
+
+  it('reject removes the pending account', async () => {
+    const { instr, token } = await instructorWithClassLink()
+    const email = `${tag}-rej@x.com`
+    await registerViaLink({ token, fullName: 'R', email, password: PW, studentNumber: 'SN-REJ' })
+    const admin = createAdminClient()
+    const { data: prof } = await admin.from('profiles').select('id').eq('email', email).single()
+    await setTestUser(instr.email, PW)
+    await rejectPending({ studentId: prof!.id })
+    const { data: gone } = await admin.from('profiles').select('id').eq('id', prof!.id).maybeSingle()
+    expect(gone).toBeNull()
   })
 })
