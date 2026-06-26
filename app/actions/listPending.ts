@@ -108,42 +108,25 @@ export async function listPending(): Promise<PendingRow[]> {
   }
 
   // 2. Unplaced pending students: pending profiles with NO enrollment row at all.
-  const { data: unplaced, error: upErr } = await admin
+  //    (general-link registrants — visible to any instructor per spec). Two-step:
+  //    fetch all enrolled student_ids, then keep pending profiles not in that set.
+  const { data: allEnrStudents } = await admin
+    .from('enrollments')
+    .select('student_id')
+  const enrolledIds = new Set((allEnrStudents ?? []).map((e: any) => e.student_id))
+  const { data: allPending, error: upErr } = await admin
     .from('profiles')
     .select('id, full_name, email, student_number')
     .eq('status', 'pending')
     .eq('role', 'student')
-    .not('id', 'in', `(select student_id from enrollments)`)
-
-  if (upErr) {
-    // Fallback: fetch all enrollments and filter client-side
-    const { data: allEnrStudents } = await admin
-      .from('enrollments')
-      .select('student_id')
-    const enrolledIds = new Set((allEnrStudents ?? []).map((e: any) => e.student_id))
-    const { data: allPending } = await admin
-      .from('profiles')
-      .select('id, full_name, email, student_number')
-      .eq('status', 'pending')
-      .eq('role', 'student')
-    for (const p of allPending ?? []) {
-      if (!enrolledIds.has(p.id)) {
-        classRows.push({
-          studentId: p.id,
-          fullName: (p as any).full_name,
-          email: (p as any).email,
-          studentNumber: (p as any).student_number ?? '',
-          className: null,
-        })
-      }
-    }
-  } else {
-    for (const p of unplaced ?? []) {
+  if (upErr) throw new Error(upErr.message)
+  for (const p of (allPending ?? []) as any[]) {
+    if (!enrolledIds.has(p.id)) {
       classRows.push({
-        studentId: (p as any).id,
-        fullName: (p as any).full_name,
-        email: (p as any).email,
-        studentNumber: (p as any).student_number ?? '',
+        studentId: p.id,
+        fullName: p.full_name,
+        email: p.email,
+        studentNumber: p.student_number ?? '',
         className: null,
       })
     }

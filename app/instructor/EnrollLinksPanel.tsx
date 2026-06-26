@@ -5,8 +5,11 @@ import { generateEnrollLink } from '@/app/actions/generateEnrollLink'
 function remaining(expiresAt: string): string {
   const ms = new Date(expiresAt).getTime() - Date.now()
   if (ms <= 0) return 'expired'
-  const d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000), m = Math.floor((ms % 3600000) / 60000)
-  return d > 0 ? `${d}d ${h}h ${m}m` : `${h}h ${m}m`
+  const d = Math.floor(ms / 86400000), h = Math.floor((ms % 86400000) / 3600000)
+  const m = Math.floor((ms % 3600000) / 60000), s = Math.floor((ms % 60000) / 1000)
+  if (d > 0) return `${d}d ${h}h ${m}m`
+  if (h > 0) return `${h}h ${m}m`
+  return `${m}m ${s}s`
 }
 
 export function EnrollLinksPanel({ classes }: { classes: { id: string; displayName: string }[] }) {

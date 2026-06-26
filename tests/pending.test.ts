@@ -57,20 +57,34 @@ describe('listPending', () => {
     expect(found).toBeUndefined()
   })
 
-  it('an unplaced pending student (no enrollment) appears for any instructor with className null', async () => {
+  it('an unplaced pending student (no enrollment) appears for any instructor with className null, and an enrolled pending student is NOT counted as unplaced', async () => {
     const instrC = await createUser({ role: 'instructor', email: `${tag}-ic@x.com`, password: PW, fullName: 'InstrC' })
-
-    // Create a pending student with no enrollment at all
-    const student = await createUser({ role: 'student', email: `${tag}-sc@x.com`, password: PW, fullName: 'StudentC', studentNumber: 'SNC-001' })
+    const courseId = (await seedCourse({ instructorId: instrC.id, code: `${tag}-CC`, title: 'Course C' })).id
+    const classId = (await seedClass({ instructorId: instrC.id, courseId, period: 'Midyear', sectionLabel: 'C1' })).id
     const admin = createAdminClient()
-    await admin.from('profiles').update({ status: 'pending' }).eq('id', student.id)
-    // No enrollment inserted — general-link registrant
+
+    // Unplaced pending student with no enrollment at all — general-link registrant.
+    const unplaced = await createUser({ role: 'student', email: `${tag}-sc@x.com`, password: PW, fullName: 'StudentC', studentNumber: 'SNC-001' })
+    await admin.from('profiles').update({ status: 'pending' }).eq('id', unplaced.id)
+
+    // A PLACED pending student enrolled in instrC's own class — must NOT be reported as unplaced (className:null).
+    const placed = await createUser({ role: 'student', email: `${tag}-scp@x.com`, password: PW, fullName: 'StudentCP', studentNumber: 'SNC-002' })
+    await admin.from('profiles').update({ status: 'pending' }).eq('id', placed.id)
+    await seedEnrollment({ studentId: placed.id, classId })
+    await admin.from('enrollments').update({ status: 'pending' }).eq('student_id', placed.id).eq('class_id', classId)
 
     await setTestUser(instrC.email, PW)
     const rows = await listPending()
 
-    const found = rows.find((r) => r.studentId === student.id)
-    expect(found).toBeDefined()
-    expect(found!.className).toBeNull()
+    // Unplaced student appears once, with null className.
+    const unplacedRows = rows.filter((r) => r.studentId === unplaced.id)
+    expect(unplacedRows).toHaveLength(1)
+    expect(unplacedRows[0].className).toBeNull()
+
+    // Placed student appears with a className — never as an unplaced (null) row.
+    const placedRows = rows.filter((r) => r.studentId === placed.id)
+    expect(placedRows.length).toBeGreaterThan(0)
+    expect(placedRows.every((r) => r.className !== null)).toBe(true)
+    expect(placedRows.some((r) => r.className === null)).toBe(false)
   })
 })
