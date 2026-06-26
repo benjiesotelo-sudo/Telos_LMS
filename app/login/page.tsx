@@ -1,4 +1,5 @@
 import { signIn } from './actions'
+import { ForgotPasswordForm } from './ForgotPasswordForm'
 
 export default async function LoginPage({
   searchParams,
@@ -48,6 +49,7 @@ export default async function LoginPage({
             {error ? <p className="feu-error">Invalid email or password.</p> : null}
           </form>
         </div>
+        <ForgotPasswordForm />
       </div>
     </>
   )
