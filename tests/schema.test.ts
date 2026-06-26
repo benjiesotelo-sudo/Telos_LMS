@@ -166,6 +166,17 @@ describe('0003_classes_roster schema', () => {
   })
 })
 
+describe('0006_profile_name_fields schema', () => {
+  it('profiles table has all 5 name-part columns', async () => {
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('profiles')
+      .select('prefix, first_name, middle_initial, last_name, suffix')
+      .limit(0)
+    expect(error).toBeNull()
+  })
+})
+
 describe('seed.sql pilot scoping', () => {
   it('seeds nothing for the bootstrap instructor on a fresh stack (no out-of-band instructor present)', async () => {
     // The whole run shares ONE `supabase db reset` (vitest.globalSetup), so global
