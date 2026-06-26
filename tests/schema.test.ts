@@ -4,8 +4,8 @@ import { createAdminClient } from '@/lib/supabase/server'
 
 const admin = createAdminClient()
 
-// Provision a throwaway instructor + course + period for constraint checks.
-// Uses the admin client (RLS lands in Task 3); the 0001 trigger makes the profile.
+// Provision a throwaway instructor + course + class for constraint checks.
+// Uses the admin client (RLS restricts as of 0002/0003); the 0001 trigger makes the profile.
 async function newInstructor() {
   const email = `schema-${randomUUID()}@example.com`
   const { data, error } = await admin.auth.admin.createUser({
@@ -34,7 +34,7 @@ describe('0001_init schema + constraints', () => {
   let instructorId: string
   let studentId: string
   let courseId: string
-  let periodId: string
+  let classId: string
 
   beforeAll(async () => {
     instructorId = await newInstructor()
@@ -48,13 +48,14 @@ describe('0001_init schema + constraints', () => {
     expect(c.error).toBeNull()
     courseId = c.data!.id
 
-    const p = await admin
-      .from('periods')
-      .insert({ course_id: courseId, instructor_id: instructorId, label: '1st Semester' })
+    // 0003_classes_roster dropped `periods` and replaced them with `classes`.
+    const cl = await admin
+      .from('classes')
+      .insert({ instructor_id: instructorId, course_id: courseId, period: '1st Semester', section_label: '1' })
       .select('id')
       .single()
-    expect(p.error).toBeNull()
-    periodId = p.data!.id
+    expect(cl.error).toBeNull()
+    classId = cl.data!.id
   })
 
   it('auto-provisions a profiles row from the auth user via the trigger', async () => {
@@ -68,22 +69,26 @@ describe('0001_init schema + constraints', () => {
     expect(data!.status).toBe('active')
   })
 
-  it('rejects the period label CHECK constraint outside the canonical set', async () => {
+  it('rejects the classes.period CHECK constraint outside the canonical set', async () => {
+    // `periods` table was dropped in 0003_classes_roster; the period label constraint
+    // now lives on classes.period. Verify it still enforces the canonical set.
     const { error } = await admin
-      .from('periods')
-      .insert({ course_id: courseId, instructor_id: instructorId, label: 'Quarter 1' })
+      .from('classes')
+      .insert({ instructor_id: instructorId, course_id: courseId, period: 'Quarter 1', section_label: '1' })
     expect(error).not.toBeNull()
   })
 
-  it('rejects a duplicate enrollment (student_id, course_id, period_id)', async () => {
+  it('rejects a duplicate enrollment (student_id, class_id)', async () => {
+    // 0003_classes_roster replaced the (student_id, course_id, period_id) unique
+    // key with (student_id, class_id).
     const first = await admin
       .from('enrollments')
-      .insert({ student_id: studentId, course_id: courseId, period_id: periodId })
+      .insert({ student_id: studentId, class_id: classId })
     expect(first.error).toBeNull()
 
     const dup = await admin
       .from('enrollments')
-      .insert({ student_id: studentId, course_id: courseId, period_id: periodId })
+      .insert({ student_id: studentId, class_id: classId })
     expect(dup.error).not.toBeNull()
     expect(dup.error!.code).toBe('23505') // unique_violation
   })
@@ -102,12 +107,12 @@ describe('0001_init schema + constraints', () => {
       .single()
     expect(a.error).toBeNull()
 
+    // 0003_classes_roster dropped course_id/period_id/pic from assignments; use class_id.
     const asg = await admin
       .from('assignments')
       .insert({
         assessment_id: a.data!.id,
-        course_id: courseId,
-        period_id: periodId,
+        class_id: classId,
         instructor_id: instructorId,
       })
       .select('id')
@@ -182,7 +187,7 @@ describe('seed.sql pilot scoping', () => {
     } else {
       // If a bootstrap user does exist, the seed attached exactly its pilot course,
       // scoped to that instructor's id (never a global code count), with a
-      // Midyear period.
+      // Midyear class (0003_classes_roster replaced periods with classes).
       const { data: pilotCourses, error } = await admin
         .from('courses')
         .select('id, instructor_id')
@@ -191,12 +196,12 @@ describe('seed.sql pilot scoping', () => {
       expect(error).toBeNull()
       expect(pilotCourses!.length).toBe(1)
       expect(pilotCourses![0].instructor_id).toBe(benji.id)
-      const { data: periods, error: pErr } = await admin
-        .from('periods')
-        .select('label')
+      const { data: classes, error: clErr } = await admin
+        .from('classes')
+        .select('period')
         .eq('course_id', pilotCourses![0].id)
-      expect(pErr).toBeNull()
-      expect(periods!.map((r) => r.label)).toContain('Midyear')
+      expect(clErr).toBeNull()
+      expect(classes!.map((r) => r.period)).toContain('Midyear')
     }
   })
 })

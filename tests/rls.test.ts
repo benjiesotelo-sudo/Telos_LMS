@@ -4,7 +4,7 @@ import { signInAs } from '@/tests/helpers/auth'
 import {
   createUser,
   seedCourse,
-  seedPeriod,
+  seedClass,
   seedAssignment,
   seedEnrollment,
 } from '@/tests/helpers/fixtures'
@@ -15,7 +15,7 @@ const tag = `rls-${Date.now()}`
 // instructor A world
 let instrA: { id: string; email: string; password: string }
 let courseA: string
-let periodA: string
+let classA: string
 let assessmentA: string
 let assignmentA: string
 let submissionStudentX: string
@@ -25,8 +25,8 @@ let instrB: { id: string; email: string; password: string }
 let courseB: string
 
 // students
-let studentX: { id: string; email: string; password: string } // enrolled in course A
-let studentY: { id: string; email: string; password: string } // enrolled in course B
+let studentX: { id: string; email: string; password: string } // enrolled in class A
+let studentY: { id: string; email: string; password: string } // enrolled in class B
 
 beforeAll(async () => {
   const admin = createAdminClient()
@@ -61,14 +61,14 @@ beforeAll(async () => {
   // Course A owned by instructor A; course B owned by instructor B.
   courseA = (await seedCourse({ instructorId: instrA.id, code: `${tag}-A`, title: 'Course A' })).id
   courseB = (await seedCourse({ instructorId: instrB.id, code: `${tag}-B`, title: 'Course B' })).id
-  periodA = (await seedPeriod({ courseId: courseA, instructorId: instrA.id, label: '1st Semester' })).id
-  const periodB = (await seedPeriod({ courseId: courseB, instructorId: instrB.id, label: '1st Semester' })).id
+  classA = (await seedClass({ instructorId: instrA.id, courseId: courseA, period: '1st Semester' })).id
+  const classB = (await seedClass({ instructorId: instrB.id, courseId: courseB, period: '1st Semester' })).id
 
   // Student X enrolled in A; student Y enrolled in B.
-  await seedEnrollment({ studentId: studentX.id, courseId: courseA, periodId: periodA })
-  await seedEnrollment({ studentId: studentY.id, courseId: courseB, periodId: periodB })
+  await seedEnrollment({ studentId: studentX.id, classId: classA })
+  await seedEnrollment({ studentId: studentY.id, classId: classB })
 
-  // Assessment + key owned by instructor A, assigned into course A / period A.
+  // Assessment + key owned by instructor A, assigned into class A.
   const { data: aRow, error: aErr } = await admin
     .from('assessments')
     .insert({
@@ -89,13 +89,12 @@ beforeAll(async () => {
   assignmentA = (
     await seedAssignment({
       assessmentId: assessmentA,
-      courseId: courseA,
-      periodId: periodA,
+      classId: classA,
       instructorId: instrA.id,
     })
   ).id
 
-  // A graded submission by student X in course A (written via admin, as submitAssessment would).
+  // A graded submission by student X in class A (written via admin, as submitAssessment would).
   const { data: sRow, error: sErr } = await admin
     .from('submissions')
     .insert({
@@ -171,9 +170,9 @@ describe('answer-key secrecy (service-role only)', () => {
     expect(data).toEqual([])
   })
 
-  it('a student client gets 0 rows from invites', async () => {
+  it('a student client gets 0 rows from enroll_links', async () => {
     const { client } = await signInAs(studentX.email, PW)
-    const { data } = await client.from('invites').select('token')
+    const { data } = await client.from('enroll_links').select('token')
     expect(data).toEqual([])
   })
 })

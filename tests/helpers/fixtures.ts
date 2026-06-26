@@ -39,18 +39,22 @@ export async function seedCourse(input: {
   return { id: data.id }
 }
 
-export async function seedPeriod(input: {
-  courseId: string
+export async function seedClass(input: {
   instructorId: string
-  label: string
+  courseId: string
+  period: string
+  sectionLabel?: string
+  pic?: string
 }): Promise<{ id: string }> {
   const admin = createAdminClient()
   const { data, error } = await admin
-    .from('periods')
+    .from('classes')
     .insert({
-      course_id: input.courseId,
       instructor_id: input.instructorId,
-      label: input.label,
+      course_id: input.courseId,
+      period: input.period,
+      section_label: input.sectionLabel ?? '1',
+      pic: input.pic ?? '',
     })
     .select('id')
     .single()
@@ -60,10 +64,8 @@ export async function seedPeriod(input: {
 
 export async function seedAssignment(input: {
   assessmentId: string
-  courseId: string
-  periodId: string
+  classId: string
   instructorId: string
-  pic?: string
   opensAt?: string
   closesAt?: string
 }): Promise<{ id: string }> {
@@ -72,10 +74,8 @@ export async function seedAssignment(input: {
     .from('assignments')
     .insert({
       assessment_id: input.assessmentId,
-      course_id: input.courseId,
-      period_id: input.periodId,
+      class_id: input.classId,
       instructor_id: input.instructorId,
-      pic: input.pic ?? '',
       opens_at: input.opensAt ?? null,
       closes_at: input.closesAt ?? null,
     })
@@ -87,17 +87,12 @@ export async function seedAssignment(input: {
 
 export async function seedEnrollment(input: {
   studentId: string
-  courseId: string
-  periodId: string
+  classId: string
 }): Promise<{ id: string }> {
   const admin = createAdminClient()
   const { data, error } = await admin
     .from('enrollments')
-    .insert({
-      student_id: input.studentId,
-      course_id: input.courseId,
-      period_id: input.periodId,
-    })
+    .insert({ student_id: input.studentId, class_id: input.classId })
     .select('id')
     .single()
   if (error) throw error
