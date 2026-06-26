@@ -177,6 +177,26 @@ describe('0006_profile_name_fields schema', () => {
   })
 })
 
+describe('0008_assignment_meta schema', () => {
+  it('assignments table has period, active, reveal_answers columns', async () => {
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('assignments')
+      .select('period, active, reveal_answers')
+      .limit(0)
+    expect(error).toBeNull()
+  })
+
+  it('classes table has wt_quiz, wt_paper, wt_exam columns', async () => {
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('classes')
+      .select('wt_quiz, wt_paper, wt_exam')
+      .limit(0)
+    expect(error).toBeNull()
+  })
+})
+
 describe('seed.sql pilot scoping', () => {
   it('seeds nothing for the bootstrap instructor on a fresh stack (no out-of-band instructor present)', async () => {
     // The whole run shares ONE `supabase db reset` (vitest.globalSetup), so global
