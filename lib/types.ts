@@ -57,3 +57,14 @@ export interface ComponentSubmission {
   earned: number
   possible: number
 }
+
+export interface ClassRow {
+  id: string
+  courseId: string
+  code: string
+  title: string
+  period: string
+  sectionLabel: string
+  pic: string
+  displayName: string
+}
