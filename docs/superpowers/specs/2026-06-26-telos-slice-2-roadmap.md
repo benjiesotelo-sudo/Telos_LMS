@@ -66,9 +66,50 @@ dashboards render over, so foundation-first is highest-leverage.
 
 ---
 
+## Plan update (2026-06-26 PM) — App Shell first + enriched scope
+
+Theme B is **merged + deployed**. After the live smoke test, the user raised UX/structure concerns
+that are now first-class plan items, and enriched the scope of A and C. Revised build order:
+
+**N (App Shell) → A → C → D → E.**  Cadence: build the shell, ONE checkpoint (review the frame),
+then build A→C→D→E continuously, final review, deploy together.
+
+### Theme N — App Shell, Navigation & Page Structure (NEW — goes first)
+- Split the single instructor page into **routed pages** behind a **left sidebar** nav
+  (Dashboard / Classes / Roster & Links / Assessments / Grades / Profile).
+- Same shell for the **student** side (real dashboard, not one page).
+- **Enroll-link management view** (in Roster & Links): list ACTIVE links per class, **reuse the
+  existing link instead of regenerating**, **revoke**, live countdown. (Fixes "links pile up".)
+- **No-refresh updates**: lists refresh in place after create/approve (no manual reload).
+
+### Theme A — Identity & Profile + Account Management (enriched)
+- Profile view + logout (both roles); student detail-change requests.
+- **Super admin = full account management**: manage BOTH instructor and student accounts —
+  view, **edit details**, **delete**, **manually create** accounts. Strictly behind the
+  super-admin role, server-side guards, service-role ops (respects the escalation guard).
+
+### Theme C — Course Management Hub + Assessment Management (enriched — high priority per user)
+- **Course hub**: select a course → see **enrolled students + which sections** belong to it.
+- **Assessment list by type** (homework/quiz/exam) with an **active on/off toggle** per class
+  (turn an assessment on/off for a section).
+- **Custom deadlines per class/section** (per-assignment opens/closes/due).
+- **Per-assessment "reveal correct answers after close/taken" toggle** (instructor sets it;
+  drives the student-facing reveal in Theme D). Default OFF (answers stay instructor-only).
+- Quiz **preview + instructor view correct answers**; quiz name/description; **timer setting**;
+  fast assign-to-class.
+
+### Theme D — Student Experience
+- Student dashboard, view classes, class details (deadlines/timers), pre-quiz screen,
+  **live countdown + auto-submit**. Students see correct answers ONLY when the assessment's
+  per-assessment reveal toggle is ON and it's closed/taken.
+
+### Theme E — Hardening (woven in)
+- (unchanged — see below.)
+
 ## Status
-- [x] Theme B — design spec → plan → build → reviewed (branch `feat/theme-b-classes-roster`, 98/98, ready to merge)
-- [ ] Theme A  ← **next**
-- [ ] Theme C
-- [ ] Theme D
+- [x] Theme B — built, reviewed, **merged + deployed** (98/98)
+- [ ] **Theme N — App Shell + nav (incl. link mgmt + no-refresh)  ← next**
+- [ ] Theme A — profiles/logout + super-admin account management
+- [ ] Theme C — course hub + assessment management (toggles, deadlines, reveal)
+- [ ] Theme D — student experience
 - [ ] Theme E (woven in)
