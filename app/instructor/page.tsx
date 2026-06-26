@@ -4,7 +4,10 @@ import { CoursePanel } from '@/app/instructor/CoursePanel'
 import { ClassPanel } from '@/app/instructor/ClassPanel'
 import { AssignPanel } from '@/app/instructor/AssignPanel'
 import { SubmissionsPanel, type RosterRow } from '@/app/instructor/SubmissionsPanel'
-import { listPics } from '@/app/actions/listClasses'
+import { EnrollLinksPanel } from '@/app/instructor/EnrollLinksPanel'
+import { PendingPanel } from '@/app/instructor/PendingPanel'
+import { listPics, listClasses } from '@/app/actions/listClasses'
+import { listPending } from '@/app/actions/listPending'
 import type { ComponentType } from '@/lib/types'
 
 export default async function InstructorPage() {
@@ -28,6 +31,8 @@ export default async function InstructorPage() {
     .select('id, code')
     .order('created_at')
   const pics = await listPics()
+  const classes = await listClasses()
+  const pending = await listPending()
 
   const { data: cls } = await supabase
     .from('classes')
@@ -62,6 +67,8 @@ export default async function InstructorPage() {
         <ImportPanel />
         <CoursePanel />
         <ClassPanel courses={courses ?? []} pics={pics} />
+        <EnrollLinksPanel classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))} />
+        <PendingPanel rows={pending} />
         {cls ? (
           <AssignPanel classId={cls.id} />
         ) : (

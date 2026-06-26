@@ -1,0 +1,76 @@
+import { describe, it, expect } from 'vitest'
+import { createAdminClient } from '@/lib/supabase/server'
+import { setTestUser } from '@/tests/helpers/auth'
+import { createUser, seedCourse, seedClass, seedEnrollment } from '@/tests/helpers/fixtures'
+import { listPending } from '@/app/actions/listPending'
+
+const PW = 'Test_pw_123!'
+const tag = `pend-${Date.now()}`
+
+describe('listPending', () => {
+  it('a pending student enrolled in instructor A class appears in A listPending with className', async () => {
+    const instrA = await createUser({ role: 'instructor', email: `${tag}-ia@x.com`, password: PW, fullName: 'InstrA' })
+    const courseId = (await seedCourse({ instructorId: instrA.id, code: `${tag}-CA`, title: 'Course A' })).id
+    const classId = (await seedClass({ instructorId: instrA.id, courseId, period: 'Midyear', sectionLabel: 'A1' })).id
+
+    // Create student as active, then flip to pending
+    const student = await createUser({ role: 'student', email: `${tag}-sa@x.com`, password: PW, fullName: 'StudentA', studentNumber: 'SNA-001' })
+    const admin = createAdminClient()
+    await admin.from('profiles').update({ status: 'pending' }).eq('id', student.id)
+
+    // Enroll with pending status
+    await seedEnrollment({ studentId: student.id, classId })
+    await admin.from('enrollments').update({ status: 'pending' }).eq('student_id', student.id).eq('class_id', classId)
+
+    await setTestUser(instrA.email, PW)
+    const rows = await listPending()
+
+    const found = rows.find((r) => r.studentId === student.id)
+    expect(found).toBeDefined()
+    expect(found!.fullName).toBe('StudentA')
+    expect(found!.email).toBe(student.email)
+    expect(found!.className).toBeTruthy()
+    // className should contain the course code and section label
+    expect(found!.className).toContain(`${tag}-CA`)
+    expect(found!.className).toContain('A1')
+  })
+
+  it('a pending student enrolled in instructor A class does NOT appear in instructor B listPending (tenant isolation)', async () => {
+    const instrA2 = await createUser({ role: 'instructor', email: `${tag}-ia2@x.com`, password: PW, fullName: 'InstrA2' })
+    const instrB = await createUser({ role: 'instructor', email: `${tag}-ib@x.com`, password: PW, fullName: 'InstrB' })
+    const courseId = (await seedCourse({ instructorId: instrA2.id, code: `${tag}-CB`, title: 'Course B' })).id
+    const classId = (await seedClass({ instructorId: instrA2.id, courseId, period: 'Midyear', sectionLabel: 'B1' })).id
+
+    const student = await createUser({ role: 'student', email: `${tag}-sb@x.com`, password: PW, fullName: 'StudentB', studentNumber: 'SNB-001' })
+    const admin = createAdminClient()
+    await admin.from('profiles').update({ status: 'pending' }).eq('id', student.id)
+
+    await seedEnrollment({ studentId: student.id, classId })
+    await admin.from('enrollments').update({ status: 'pending' }).eq('student_id', student.id).eq('class_id', classId)
+
+    // Instructor B (different instructor) calls listPending
+    await setTestUser(instrB.email, PW)
+    const rows = await listPending()
+
+    // Student is enrolled in A2's class, not B's — should NOT appear for B
+    const found = rows.find((r) => r.studentId === student.id)
+    expect(found).toBeUndefined()
+  })
+
+  it('an unplaced pending student (no enrollment) appears for any instructor with className null', async () => {
+    const instrC = await createUser({ role: 'instructor', email: `${tag}-ic@x.com`, password: PW, fullName: 'InstrC' })
+
+    // Create a pending student with no enrollment at all
+    const student = await createUser({ role: 'student', email: `${tag}-sc@x.com`, password: PW, fullName: 'StudentC', studentNumber: 'SNC-001' })
+    const admin = createAdminClient()
+    await admin.from('profiles').update({ status: 'pending' }).eq('id', student.id)
+    // No enrollment inserted — general-link registrant
+
+    await setTestUser(instrC.email, PW)
+    const rows = await listPending()
+
+    const found = rows.find((r) => r.studentId === student.id)
+    expect(found).toBeDefined()
+    expect(found!.className).toBeNull()
+  })
+})

@@ -68,3 +68,11 @@ export interface ClassRow {
   pic: string
   displayName: string
 }
+
+export interface PendingRow {
+  studentId: string
+  fullName: string
+  email: string
+  studentNumber: string
+  className: string | null
+}
