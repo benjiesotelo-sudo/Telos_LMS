@@ -1,11 +1,24 @@
 'use server'
 import { createAdminClient } from '@/lib/supabase/server'
+import { composeFullName } from '@/lib/name'
 
 export async function registerViaLink(input: {
-  token: string; fullName: string; email: string; password: string
-  studentNumber: string; classId?: string
+  token: string
+  prefix?: string
+  firstName: string
+  middleInitial?: string
+  lastName: string
+  suffix?: string
+  email: string
+  password: string
+  studentNumber: string
+  classId?: string
 }): Promise<{ ok: true }> {
   const admin = createAdminClient()
+
+  // Validate required name parts.
+  if (!input.firstName.trim()) throw new Error('First name is required')
+  if (!input.lastName.trim()) throw new Error('Last name is required')
 
   // 1) Validate the link.
   const { data: link, error: linkErr } = await admin
@@ -29,16 +42,34 @@ export async function registerViaLink(input: {
   // 3) Resolve the target class (class link → its class; general → caller's choice).
   const classId = link.kind === 'class' ? link.class_id : (input.classId ?? null)
 
-  // 4) Create the auth user — role forced to student, status pending.
+  // 4) Compose full name from parts.
+  const prefix = (input.prefix ?? '').trim()
+  const firstName = input.firstName.trim()
+  const middleInitial = (input.middleInitial ?? '').trim()
+  const lastName = input.lastName.trim()
+  const suffix = (input.suffix ?? '').trim()
+  const full_name = composeFullName({ prefix, firstName, middleInitial, lastName, suffix })
+
+  // 5) Create the auth user — role forced to student, status pending.
   const { data: created, error: createErr } = await admin.auth.admin.createUser({
     email,
     password: input.password,
     email_confirm: true,
-    user_metadata: { role: 'student', status: 'pending', full_name: input.fullName, student_number: sn },
+    user_metadata: {
+      role: 'student',
+      status: 'pending',
+      full_name,
+      student_number: sn,
+      prefix,
+      first_name: firstName,
+      middle_initial: middleInitial,
+      last_name: lastName,
+      suffix,
+    },
   })
   if (createErr || !created.user) throw new Error(createErr?.message ?? 'Failed to create account')
 
-  // 5) Pending enrollment only if a class is known.
+  // 6) Pending enrollment only if a class is known.
   if (classId) {
     const { error: enrErr } = await admin
       .from('enrollments')

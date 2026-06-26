@@ -6,6 +6,7 @@ import { generateEnrollLink } from '@/app/actions/generateEnrollLink'
 import { registerViaLink } from '@/app/actions/registerViaLink'
 import { approvePending } from '@/app/actions/approvePending'
 import { rejectPending } from '@/app/actions/rejectPending'
+import { composeFullName } from '@/lib/name'
 
 const PW = 'Test_pw_123!'
 const tag = `reg-${Date.now()}`
@@ -23,30 +24,52 @@ describe('registerViaLink', () => {
   it('creates a pending student + pending enrollment, role forced to student', async () => {
     const { classId, token } = await instructorWithClassLink()
     const email = `${tag}-stud@x.com`
-    await registerViaLink({ token, fullName: 'Stud', email, password: PW, studentNumber: 'SN-1', classId: 'attacker-ignored' })
+    await registerViaLink({ token, firstName: 'Stud', lastName: 'Student', email, password: PW, studentNumber: 'SN-1', classId: 'attacker-ignored' })
     const admin = createAdminClient()
-    const { data: prof } = await admin.from('profiles').select('id, role, status').eq('email', email).single()
+    const { data: prof } = await admin.from('profiles').select('id, role, status, full_name, first_name, last_name').eq('email', email).single()
     expect(prof?.role).toBe('student')
     expect(prof?.status).toBe('pending')
+    expect(prof?.full_name).toBe(composeFullName({ firstName: 'Stud', lastName: 'Student' }))
+    expect(prof?.first_name).toBe('Stud')
+    expect(prof?.last_name).toBe('Student')
     const { data: enr } = await admin.from('enrollments').select('status, class_id').eq('student_id', prof!.id).single()
     expect(enr?.status).toBe('pending')
     expect(enr?.class_id).toBe(classId)
   })
 
+  it('stores all name parts and composes full_name with prefix and suffix', async () => {
+    const { token } = await instructorWithClassLink()
+    const email = `${tag}-named@x.com`
+    const parts = { prefix: 'Dr.', firstName: 'Maria', middleInitial: 'A', lastName: 'Santos', suffix: 'Jr.' }
+    await registerViaLink({ token, ...parts, email, password: PW, studentNumber: 'SN-NAMED' })
+    const admin = createAdminClient()
+    const { data: prof } = await admin
+      .from('profiles')
+      .select('full_name, prefix, first_name, middle_initial, last_name, suffix')
+      .eq('email', email)
+      .single()
+    expect(prof?.full_name).toBe(composeFullName(parts))
+    expect(prof?.prefix).toBe('Dr.')
+    expect(prof?.first_name).toBe('Maria')
+    expect(prof?.middle_initial).toBe('A')
+    expect(prof?.last_name).toBe('Santos')
+    expect(prof?.suffix).toBe('Jr.')
+  })
+
   it('blocks a duplicate email with a field-specific message', async () => {
     const { token } = await instructorWithClassLink()
     const email = `${tag}-dupe@x.com`
-    await registerViaLink({ token, fullName: 'A', email, password: PW, studentNumber: 'SN-A' })
+    await registerViaLink({ token, firstName: 'Alice', lastName: 'A', email, password: PW, studentNumber: 'SN-A' })
     const { token: token2 } = await instructorWithClassLink()
-    await expect(registerViaLink({ token: token2, fullName: 'B', email, password: PW, studentNumber: 'SN-B' }))
+    await expect(registerViaLink({ token: token2, firstName: 'Bob', lastName: 'B', email, password: PW, studentNumber: 'SN-B' }))
       .rejects.toThrow(/email .* already registered/i)
   })
 
   it('blocks a duplicate student number with a field-specific message', async () => {
     const { token } = await instructorWithClassLink()
-    await registerViaLink({ token, fullName: 'A', email: `${tag}-sn1@x.com`, password: PW, studentNumber: 'SN-DUP' })
+    await registerViaLink({ token, firstName: 'Alice', lastName: 'A', email: `${tag}-sn1@x.com`, password: PW, studentNumber: 'SN-DUP' })
     const { token: token2 } = await instructorWithClassLink()
-    await expect(registerViaLink({ token: token2, fullName: 'B', email: `${tag}-sn2@x.com`, password: PW, studentNumber: 'SN-DUP' }))
+    await expect(registerViaLink({ token: token2, firstName: 'Bob', lastName: 'B', email: `${tag}-sn2@x.com`, password: PW, studentNumber: 'SN-DUP' }))
       .rejects.toThrow(/student number .* already registered/i)
   })
 
@@ -54,7 +77,7 @@ describe('registerViaLink', () => {
     const { token } = await instructorWithClassLink()
     const admin = createAdminClient()
     await admin.from('enroll_links').update({ expires_at: new Date(Date.now() - 1000).toISOString() }).eq('token', token)
-    await expect(registerViaLink({ token, fullName: 'X', email: `${tag}-exp@x.com`, password: PW, studentNumber: 'SN-X' }))
+    await expect(registerViaLink({ token, firstName: 'Exp', lastName: 'User', email: `${tag}-exp@x.com`, password: PW, studentNumber: 'SN-X' }))
       .rejects.toThrow(/expired/i)
   })
 
@@ -62,13 +85,13 @@ describe('registerViaLink', () => {
     const { token } = await instructorWithClassLink()
     const admin = createAdminClient()
     await admin.from('enroll_links').update({ revoked_at: new Date().toISOString() }).eq('token', token)
-    await expect(registerViaLink({ token, fullName: 'R', email: `${tag}-rev@x.com`, password: PW, studentNumber: 'SN-R' }))
+    await expect(registerViaLink({ token, firstName: 'Rev', lastName: 'User', email: `${tag}-rev@x.com`, password: PW, studentNumber: 'SN-R' }))
       .rejects.toThrow(/revoked/i)
   })
 
   it('rejects an empty student number', async () => {
     const { token } = await instructorWithClassLink()
-    await expect(registerViaLink({ token, fullName: 'E', email: `${tag}-empty@x.com`, password: PW, studentNumber: '' }))
+    await expect(registerViaLink({ token, firstName: 'Empty', lastName: 'User', email: `${tag}-empty@x.com`, password: PW, studentNumber: '' }))
       .rejects.toThrow(/student number is required/i)
   })
 })
@@ -77,7 +100,7 @@ describe('approve / reject pending', () => {
   it('approve activates the profile and enrollment', async () => {
     const { instr, classId, token } = await instructorWithClassLink()
     const email = `${tag}-appr@x.com`
-    await registerViaLink({ token, fullName: 'P', email, password: PW, studentNumber: 'SN-APPR' })
+    await registerViaLink({ token, firstName: 'Pend', lastName: 'Student', email, password: PW, studentNumber: 'SN-APPR' })
     const admin = createAdminClient()
     const { data: prof } = await admin.from('profiles').select('id').eq('email', email).single()
     await setTestUser(instr.email, PW)
@@ -91,7 +114,7 @@ describe('approve / reject pending', () => {
   it('reject removes the pending account', async () => {
     const { instr, token } = await instructorWithClassLink()
     const email = `${tag}-rej@x.com`
-    await registerViaLink({ token, fullName: 'R', email, password: PW, studentNumber: 'SN-REJ' })
+    await registerViaLink({ token, firstName: 'Rej', lastName: 'Student', email, password: PW, studentNumber: 'SN-REJ' })
     const admin = createAdminClient()
     const { data: prof } = await admin.from('profiles').select('id').eq('email', email).single()
     await setTestUser(instr.email, PW)
@@ -103,7 +126,7 @@ describe('approve / reject pending', () => {
   it('approve rejects an already-active (non-pending) student', async () => {
     const { instr, classId, token } = await instructorWithClassLink()
     const email = `${tag}-active-guard@x.com`
-    await registerViaLink({ token, fullName: 'ActiveGuard', email, password: PW, studentNumber: 'SN-ACTIVE-GUARD' })
+    await registerViaLink({ token, firstName: 'Active', lastName: 'Guard', email, password: PW, studentNumber: 'SN-ACTIVE-GUARD' })
     const admin = createAdminClient()
     const { data: prof } = await admin.from('profiles').select('id').eq('email', email).single()
     // First approve makes the student active.
@@ -117,7 +140,7 @@ describe('approve / reject pending', () => {
   it('reject refuses a student the caller does not instruct (tenant isolation)', async () => {
     const { token } = await instructorWithClassLink()
     const email = `${tag}-rej-x@x.com`
-    await registerViaLink({ token, fullName: 'X', email, password: PW, studentNumber: 'SN-REJ-X' })
+    await registerViaLink({ token, firstName: 'Cross', lastName: 'Tenant', email, password: PW, studentNumber: 'SN-REJ-X' })
     const admin = createAdminClient()
     const { data: prof } = await admin.from('profiles').select('id').eq('email', email).single()
     // A different instructor (B) who does not instruct this student.
