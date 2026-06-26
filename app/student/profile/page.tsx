@@ -31,10 +31,13 @@ export default async function StudentProfilePage() {
             <span style={{ textTransform: 'capitalize' }}>{profile?.role ?? <span className="feu-muted">—</span>}</span>
           </div>
         </div>
-        <div style={{ marginTop: 20 }}>
+        <div style={{ marginTop: 20, display: 'flex', gap: 12, flexWrap: 'wrap' }}>
           <form action={signOut}>
             <button type="submit" className="feu-btn-gold">Sign out</button>
           </form>
+          <a href="/account/password" className="feu-btn-gold" style={{ textDecoration: 'none', display: 'inline-block' }}>
+            Change password
+          </a>
         </div>
       </section>
 
