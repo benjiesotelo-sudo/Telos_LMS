@@ -92,3 +92,15 @@ export interface EnrollLinkRow {
   classId: string | null; className: string | null
   expiresAt: string; createdAt: string
 }
+
+export interface GradeOverride {
+  id: string
+  studentId: string
+  assessmentId: string
+  classId: string
+  score: number       // may exceed 100 (bonus)
+  note: string
+  instructorId: string
+  createdAt: string
+  updatedAt: string
+}
