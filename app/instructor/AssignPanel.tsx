@@ -5,6 +5,7 @@ import { createAssignment } from '@/app/actions/createAssignment'
 export function AssignPanel({ classes }: { classes: { id: string; displayName: string }[] }) {
   const [classId, setClassId] = useState(classes[0]?.id ?? '')
   const [assessmentId, setAssessmentId] = useState('')
+  const [period, setPeriod] = useState<'midterm' | 'final'>('midterm')
   const [opensAt, setOpensAt] = useState('')
   const [closesAt, setClosesAt] = useState('')
   const [msg, setMsg] = useState('')
@@ -17,6 +18,7 @@ export function AssignPanel({ classes }: { classes: { id: string; displayName: s
       const res = await createAssignment({
         assessmentId,
         classId,
+        period,
         opensAt: opensAt ? new Date(opensAt).toISOString() : undefined,
         closesAt: closesAt ? new Date(closesAt).toISOString() : undefined,
       })
@@ -61,6 +63,19 @@ export function AssignPanel({ classes }: { classes: { id: string; displayName: s
             onChange={(e) => setAssessmentId(e.target.value)}
             placeholder="Assessment id"
           />
+        </div>
+        <div>
+          <label className="feu-label" htmlFor="assign-period">Period</label>
+          <select
+            id="assign-period"
+            aria-label="Period"
+            className="feu-input"
+            value={period}
+            onChange={(e) => setPeriod(e.target.value as 'midterm' | 'final')}
+          >
+            <option value="midterm">Midterm</option>
+            <option value="final">Final</option>
+          </select>
         </div>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
           <div>

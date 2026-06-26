@@ -1,9 +1,13 @@
 'use server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
+import { refresh } from 'next/cache'
 
 export interface CreateAssignmentInput {
   assessmentId: string
   classId: string
+  period: 'midterm' | 'final'
+  active?: boolean
+  revealAnswers?: boolean
   opensAt?: string
   closesAt?: string
   dueDate?: string
@@ -29,6 +33,9 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<{ 
       assessment_id: input.assessmentId,
       class_id: input.classId,
       instructor_id: cls.instructor_id,
+      period: input.period,
+      active: input.active ?? true,
+      reveal_answers: input.revealAnswers ?? false,
       opens_at: input.opensAt ?? null,
       closes_at: input.closesAt ?? null,
       due_date: input.dueDate ?? null,
@@ -36,5 +43,6 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<{ 
     .select('id')
     .single()
   if (insErr || !inserted) throw new Error(`Failed to create assignment: ${insErr?.message ?? 'unknown'}`)
+  refresh()
   return { assignmentId: inserted.id }
 }

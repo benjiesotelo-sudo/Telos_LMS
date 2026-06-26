@@ -14,10 +14,12 @@ export async function getTakePayload(
   // RLS on assignments only returns rows the caller is enrolled in (or owns).
   const { data: assignment, error: aErr } = await supabase
     .from('assignments')
-    .select('id, assessment_id, class_id, opens_at, closes_at')
+    .select('id, assessment_id, class_id, opens_at, closes_at, active')
     .eq('id', assignmentId)
     .single()
   if (aErr || !assignment) throw new Error('Assignment not found or you are not enrolled.')
+
+  if (assignment.active === false) throw new Error('This assessment is not currently available.')
 
   const now = Date.now()
   const opensAt = assignment.opens_at ? new Date(assignment.opens_at).getTime() : null
