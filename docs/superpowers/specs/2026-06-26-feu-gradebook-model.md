@@ -46,8 +46,12 @@ Passing mark = **50%**. (Law programs would be 75%, N/A here.)
 
 ## How this maps onto Telos
 - Telos assessments already auto-grade to `earned/possible` → a percentage. **That percentage IS
-  the item %** — instructors won't hand-enter MAX/raw; the quiz computes it. (Manual-entry items,
-  e.g. a paper graded offline, may still need a manual score field — see open question.)
+  the item %** by default.
+- **Manual override (CONFIRMED):** for any (student, assessment) the instructor can enter a
+  **manual score that TAKES PRIORITY** over the auto-graded digital score. Uses: a student who
+  missed the online quiz, **bonus points**, or a paper graded offline. So each grade cell =
+  `manual_score if present else auto_graded_%`. The override is stored per submission/grade-entry
+  and is what flows into the category averages. (Allow it to exceed 100 for bonus.)
 - Each assessment has a `type` (activity / quiz / exam) → maps to the category:
   quiz→Quizzes, activity→Papers/HW/SW, exam→Term Exam.
 - Need a **period** tag (Midterm / Final) per assignment so the two-period split works.
