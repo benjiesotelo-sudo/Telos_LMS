@@ -1,7 +1,10 @@
 import { createClient } from '@/lib/supabase/server'
 import { ImportPanel } from '@/app/instructor/ImportPanel'
+import { CoursePanel } from '@/app/instructor/CoursePanel'
+import { ClassPanel } from '@/app/instructor/ClassPanel'
 import { AssignPanel } from '@/app/instructor/AssignPanel'
 import { SubmissionsPanel, type RosterRow } from '@/app/instructor/SubmissionsPanel'
+import { listPics } from '@/app/actions/listClasses'
 import type { ComponentType } from '@/lib/types'
 
 export default async function InstructorPage() {
@@ -19,6 +22,12 @@ export default async function InstructorPage() {
       </>
     )
   }
+
+  const { data: courses } = await supabase
+    .from('courses')
+    .select('id, code')
+    .order('created_at')
+  const pics = await listPics()
 
   const { data: cls } = await supabase
     .from('classes')
@@ -51,6 +60,8 @@ export default async function InstructorPage() {
       </header>
       <div className="feu-wrap">
         <ImportPanel />
+        <CoursePanel />
+        <ClassPanel courses={courses ?? []} pics={pics} />
         {cls ? (
           <AssignPanel classId={cls.id} />
         ) : (
