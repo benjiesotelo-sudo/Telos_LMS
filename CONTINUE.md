@@ -148,3 +148,6 @@ User picked **Option 1: per-assessment entry** (read-only computed sheet + a foc
 6. **Perf:** parallelize `getSectionGrades`'s ~5 sequential cloud queries with `Promise.all` as part of this task (the grades page is the slow one).
 
 Data already available from `getSectionGrades`: per-assessment `totalPoints`, per-student `cells` (%) + `rawOverrides` (raw). Add the per-student **auto raw** value (submission.earned) to the payload so the editor can show "auto N" and decide ≠-auto.
+
+## How we work on this project (for whoever resumes)
+Cadence the user likes: design/brainstorm → build (subagent-driven where it fits) → verify (npm test + the e2e/ smoke harness) → milestone report → user reviews. Work autonomously between milestones; he checks results, not every step. Give honest recommendations on design choices, not just options. Keep THIS file current — it is the continuity mechanism across /clear and /compact. Be precise about built-vs-designed. Follow AGENTS.md rules.
