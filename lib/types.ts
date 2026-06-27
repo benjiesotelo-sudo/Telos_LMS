@@ -210,6 +210,67 @@ export interface ClassDetail {
   students: ClassDetailStudent[]
 }
 
+// ---------------------------------------------------------------------------
+// Student-facing views (Theme D)
+// ---------------------------------------------------------------------------
+
+/** One assessment as a student sees it — with their own submission status. */
+export interface StudentTask {
+  assignmentId: string
+  assessmentId: string
+  title: string
+  type: 'activity' | 'quiz' | 'exam'
+  period: 'midterm' | 'final'
+  isManual: boolean
+  active: boolean
+  revealAnswers: boolean
+  opensAt: string | null
+  closesAt: string | null
+  dueDate: string | null
+  /** Per-attempt time limit in minutes (null = untimed). */
+  durationMinutes: number | null
+  /** The student's submission, if any. */
+  submissionId: string | null
+  submitted: boolean
+  graded: boolean
+  /** Earned percentage when graded (else null). */
+  scorePct: number | null
+  /** True when answers are revealable to the student right now (gate satisfied). */
+  canReview: boolean
+}
+
+export interface StudentClassSummary {
+  classId: string
+  code: string
+  title: string
+  sectionLabel: string
+  period: string | null
+  tasks: StudentTask[]
+}
+
+export interface StudentOverview {
+  classes: StudentClassSummary[]
+}
+
+/** One class's read-only grade breakdown for the student's own grades page. */
+export interface StudentClassGrade {
+  classId: string
+  displayName: string
+  weights: { wtQuiz: number; wtPaper: number; wtExam: number }
+  assessments: SectionAssessmentMeta[]
+  cells: Record<string, number | null>
+  rawOverrides: Record<string, number>
+  midtermMark: number | null
+  finalMark: number | null
+  courseMark: number | null
+  letter: string | null
+  qp: number | null
+}
+
+export interface StudentGrades {
+  classes: StudentClassGrade[]
+}
+
 /** Full section gradebook returned by getSectionGrades. */
 export interface SectionGrades {
   class: {
