@@ -1,340 +1,424 @@
 'use client'
 import { useState } from 'react'
 import { setGradeOverrides } from '@/app/actions/setGradeOverrides'
-import { deleteGradeOverride } from '@/app/actions/deleteGradeOverride'
+import { computeStudentMarks, type MarkAssessment } from '@/lib/gradebook'
 import type { SectionGrades, SectionAssessmentMeta, SectionStudentRow } from '@/lib/types'
+import {
+  scoreColor,
+  letterColor,
+  typeTag,
+  typeBg,
+  splitPeriods,
+  MANUAL_TINT,
+  EDIT_OUTLINE,
+  EDIT_TINT,
+} from './gradeStyles'
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
-
-function typeTag(t: string): string {
-  return t === 'quiz' ? 'Q' : t === 'activity' ? 'P' : 'E'
-}
-
-function periodLabel(p: string): string {
-  return p === 'midterm' ? 'Midterm' : 'Final'
-}
-
-/** Trim trailing zeros so "28.00" shows as "28" but "93.33" stays. */
+const k = (s: string, a: string) => `${s}:${a}`
 function fmt(n: number): string {
   return Number.isInteger(n) ? String(n) : String(Math.round(n * 100) / 100)
 }
 
-// ── GradeEditor (wrapper: dropdown + remount key) ──────────────────────────────
-
-interface Props {
-  grades: SectionGrades
-  classId: string
-  selectedAssessmentId: string | null
-  onSelectAssessment: (assessmentId: string) => void
-}
-
-export function GradeEditor({ grades, classId, selectedAssessmentId, onSelectAssessment }: Props) {
-  const { assessments, students } = grades
-  const meta = assessments.find((a) => a.assessmentId === selectedAssessmentId) ?? null
-
-  // Signature changes whenever the stored override / auto value for the selected
-  // column changes (after a Save or revert + server refresh()), remounting
-  // ColumnEditor so its inputs re-initialise from the fresh data.
-  const signature = meta
-    ? students
-        .map(
-          (s) =>
-            `${s.studentId}:${s.rawOverrides[meta.assessmentId] ?? ''}:${s.autoRaw[meta.assessmentId] ?? ''}`,
-        )
-        .join('|')
-    : ''
-
+export function GradeEditor({ grades, classId }: { grades: SectionGrades; classId: string }) {
+  const { assessments, students, class: cls } = grades
+  // Signature of saved data → remount (reset staged edits) after a save + refresh().
+  const signature = students
+    .map((s) =>
+      assessments
+        .map((a) => `${s.rawOverrides[a.assessmentId] ?? ''}/${s.autoRaw[a.assessmentId] ?? ''}`)
+        .join(','),
+    )
+    .join('|')
   return (
-    <div className="feu-card">
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 4 }}>
-        <h2 style={{ fontSize: 16, color: 'var(--green)', margin: 0 }}>Grade editor</h2>
-        <span style={{ fontSize: 12, color: 'var(--gray)' }}>enter raw scores for one assessment</span>
-      </div>
-      <p className="feu-muted" style={{ fontSize: 12, marginTop: 0, marginBottom: 12 }}>
-        Pick an assessment (or click a column header above). Enter each student&apos;s raw score out
-        of the item&apos;s points; the system computes the %. Leave a cell at its auto value (or use
-        ↺) to keep the auto-grade.
-      </p>
-
-      {/* Assessment picker */}
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 14 }}>
-        <label htmlFor="ge-assessment" style={{ fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap' }}>
-          Assessment:
-        </label>
-        <select
-          id="ge-assessment"
-          value={selectedAssessmentId ?? ''}
-          onChange={(e) => onSelectAssessment(e.target.value)}
-          style={{
-            flex: 1,
-            maxWidth: 460,
-            padding: '6px 10px',
-            border: '1px solid var(--border)',
-            borderRadius: 5,
-            fontSize: 13,
-            color: 'var(--ink)',
-            background: '#fff',
-            cursor: 'pointer',
-          }}
-        >
-          <option value="">— select an assessment —</option>
-          {assessments.map((a) => (
-            <option key={a.id} value={a.assessmentId}>
-              [{typeTag(a.type)}] {a.title} — {periodLabel(a.period)} · /{a.totalPoints}
-            </option>
-          ))}
-        </select>
-      </div>
-
-      {!meta && (
-        <p className="feu-muted" style={{ marginTop: 4 }}>
-          Choose an assessment to enter scores.
-        </p>
-      )}
-
-      {meta && students.length === 0 && (
-        <p className="feu-muted">No students enrolled in this section.</p>
-      )}
-
-      {meta && students.length > 0 && (
-        <ColumnEditor key={`${meta.assessmentId}::${signature}`} meta={meta} students={students} classId={classId} />
-      )}
-    </div>
+    <EditorGrid
+      key={signature}
+      assessments={assessments}
+      students={students}
+      weights={cls.weights}
+      classId={classId}
+    />
   )
 }
 
-// ── ColumnEditor (one assessment column) ───────────────────────────────────────
-
-function ColumnEditor({
-  meta,
+function EditorGrid({
+  assessments,
   students,
+  weights,
   classId,
 }: {
-  meta: SectionAssessmentMeta
+  assessments: SectionAssessmentMeta[]
   students: SectionStudentRow[]
+  weights: { wtQuiz: number; wtPaper: number; wtExam: number }
   classId: string
 }) {
-  const aid = meta.assessmentId
+  const { midtermCols, finalCols } = splitPeriods(assessments)
+  const mSpan = midtermCols.length + 1
+  const fSpan = finalCols.length + 1
+  const markAssessments: MarkAssessment[] = assessments.map((a) => ({
+    assessmentId: a.assessmentId,
+    type: a.type,
+    period: a.period,
+  }))
 
-  // Prefill: override score if present, else auto raw score, else blank.
-  function initialValue(stu: SectionStudentRow): string {
-    const ov = stu.rawOverrides[aid]
+  const [edits, setEdits] = useState<Record<string, string>>({})
+  const [editingKey, setEditingKey] = useState<string | null>(null)
+  // The staged value (or undefined) at the moment a cell was opened — used to undo on Esc.
+  const [editOrigin, setEditOrigin] = useState<string | undefined>(undefined)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [msg, setMsg] = useState<string | null>(null)
+
+  // --- per-cell value helpers ---
+  function savedRaw(stu: SectionStudentRow, a: SectionAssessmentMeta): string {
+    const ov = stu.rawOverrides[a.assessmentId]
     if (ov !== undefined) return String(ov)
-    const auto = stu.autoRaw[aid]
+    const auto = stu.autoRaw[a.assessmentId]
     if (auto !== undefined) return String(auto)
     return ''
   }
-
-  const [inputs, setInputs] = useState<Record<string, string>>(() => {
-    const init: Record<string, string> = {}
-    for (const s of students) init[s.studentId] = initialValue(s)
-    return init
-  })
-  const [saving, setSaving] = useState(false)
-  const [reverting, setReverting] = useState<string | null>(null)
-  const [error, setError] = useState<string | null>(null)
-  const [savedMsg, setSavedMsg] = useState<string | null>(null)
-
-  const busy = saving || reverting !== null
-
-  // Decide what (if anything) changed for one student.
-  // Returns { score: number | null } as a change to send, or null for no-op.
-  function changeFor(stu: SectionStudentRow): { score: number | null } | null {
-    const raw = (inputs[stu.studentId] ?? '').trim()
-    const auto = stu.autoRaw[aid]
-    const current = stu.rawOverrides[aid] // number | undefined
-
-    // Desired override: none (null) for blank or when the entry equals the auto
-    // value (don't store a redundant override — decision #2). Otherwise the number.
+  function displayRaw(stu: SectionStudentRow, a: SectionAssessmentMeta): string {
+    const key = k(stu.studentId, a.assessmentId)
+    return edits[key] !== undefined ? edits[key] : savedRaw(stu, a)
+  }
+  function previewPct(stu: SectionStudentRow, a: SectionAssessmentMeta): number | null {
+    const key = k(stu.studentId, a.assessmentId)
+    if (edits[key] === undefined) return stu.cells[a.assessmentId] ?? null
+    const t = edits[key].trim()
+    if (t === '') {
+      const auto = stu.autoRaw[a.assessmentId]
+      return auto !== undefined && a.totalPoints > 0 ? (auto / a.totalPoints) * 100 : null
+    }
+    const n = parseFloat(t)
+    if (isNaN(n)) return stu.cells[a.assessmentId] ?? null
+    return a.totalPoints > 0 ? (n / a.totalPoints) * 100 : null
+  }
+  // Save entry for a touched cell, or null for no-op. Throws on an invalid number.
+  function entryFor(
+    stu: SectionStudentRow,
+    a: SectionAssessmentMeta,
+  ): { studentId: string; assessmentId: string; score: number | null } | null {
+    const key = k(stu.studentId, a.assessmentId)
+    if (edits[key] === undefined) return null
+    const t = edits[key].trim()
+    const auto = stu.autoRaw[a.assessmentId]
+    const current = stu.rawOverrides[a.assessmentId]
     let desired: number | null
-    if (raw === '') {
-      desired = null
-    } else {
-      const num = parseFloat(raw)
-      if (isNaN(num)) throw new Error(`"${stu.fullName || 'student'}": "${raw}" is not a number`)
-      desired = auto !== undefined && num === auto ? null : num
+    if (t === '') desired = null
+    else {
+      const n = parseFloat(t)
+      if (isNaN(n)) throw new Error(`"${stu.fullName || 'student'}" / ${a.title}: "${t}" is not a number`)
+      desired = auto !== undefined && n === auto ? null : n
     }
-
     if (desired === null) {
-      return current !== undefined ? { score: null } : null // delete only if one exists
+      return current !== undefined ? { studentId: stu.studentId, assessmentId: a.assessmentId, score: null } : null
     }
-    return current === desired ? null : { score: desired }
+    return current === desired ? null : { studentId: stu.studentId, assessmentId: a.assessmentId, score: desired }
+  }
+
+  // Build entries + dirty set + destructive count for the current edits.
+  let entries: { studentId: string; assessmentId: string; score: number | null }[] = []
+  const dirty = new Set<string>()
+  let destructive = 0
+  let parseError: string | null = null
+  try {
+    for (const stu of students)
+      for (const a of assessments) {
+        const e = entryFor(stu, a)
+        if (e) {
+          entries.push(e)
+          dirty.add(k(stu.studentId, a.assessmentId))
+          if (e.score === null && stu.autoRaw[a.assessmentId] === undefined) destructive++
+        }
+      }
+  } catch (err) {
+    parseError = err instanceof Error ? err.message : 'Invalid input'
+    entries = []
+  }
+
+  function openCell(key: string) {
+    if (saving) return
+    setEditOrigin(edits[key])
+    setEditingKey(key)
+  }
+  function setVal(key: string, v: string) {
+    setEdits((p) => ({ ...p, [key]: v }))
+  }
+  function cancelEsc(key: string) {
+    setEdits((p) => {
+      const next = { ...p }
+      if (editOrigin === undefined) delete next[key]
+      else next[key] = editOrigin
+      return next
+    })
+    setEditingKey(null)
   }
 
   async function handleSave() {
     setError(null)
-    setSavedMsg(null)
-
-    let entries: { studentId: string; score: number | null }[]
-    try {
-      entries = students
-        .map((s) => {
-          const ch = changeFor(s)
-          return ch ? { studentId: s.studentId, score: ch.score } : null
-        })
-        .filter((e): e is { studentId: string; score: number | null } => e !== null)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Invalid input.')
+    setMsg(null)
+    if (parseError) {
+      setError(parseError)
       return
     }
-
     if (entries.length === 0) {
-      setSavedMsg('No changes to save.')
+      setMsg('No changes to save.')
       return
     }
-
+    if (
+      destructive > 0 &&
+      !window.confirm(
+        `This removes ${destructive} hand-entered score${destructive > 1 ? 's' : ''} with no auto-grade to fall back to — continue?`,
+      )
+    )
+      return
     setSaving(true)
     try {
-      await setGradeOverrides({ classId, assessmentId: aid, entries })
-      // Server refresh() re-renders the page; the new data remounts this editor
-      // (via the signature key) with fresh prefills. Nothing more to do here.
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to save grades.')
+      await setGradeOverrides({ classId, entries })
+      // Server refresh() re-renders the page; the new data remounts this grid
+      // (via the signature key) with fresh values and empty staged edits.
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save grades.')
       setSaving(false)
     }
   }
 
-  async function handleRevert(studentId: string) {
-    setError(null)
-    setSavedMsg(null)
-    setReverting(studentId)
-    try {
-      await deleteGradeOverride({ studentId, assessmentId: aid, classId })
-      // refresh() → remount with auto value prefilled.
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to revert.')
-      setReverting(null)
+  const markCell = (v: number | null) => (v !== null ? `${v.toFixed(2)}%` : '—')
+
+  // Cell as a render FUNCTION (not a <Component/>) so the focused input keeps its
+  // identity across re-renders (no remount / lost focus while typing).
+  function cell(stu: SectionStudentRow, a: SectionAssessmentMeta) {
+    const key = k(stu.studentId, a.assessmentId)
+    const isEditing = editingKey === key
+    const isDirty = dirty.has(key)
+    const pct = previewPct(stu, a)
+    const hasOverride = stu.rawOverrides[a.assessmentId] !== undefined
+    const auto = stu.autoRaw[a.assessmentId]
+    const display = displayRaw(stu, a)
+
+    if (isEditing) {
+      return (
+        <td key={a.id} style={{ ...tdStyle, background: EDIT_TINT, outline: `2px solid ${EDIT_OUTLINE}`, outlineOffset: -2 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+              <input
+                autoFocus
+                type="number"
+                min={0}
+                step={0.1}
+                value={edits[key] ?? savedRaw(stu, a)}
+                onChange={(e) => setVal(key, e.target.value)}
+                onBlur={() => setEditingKey(null)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault()
+                    setEditingKey(null)
+                  }
+                  if (e.key === 'Escape') cancelEsc(key)
+                }}
+                style={{ width: 52, padding: '2px 4px', fontSize: 12, border: `1.5px solid ${EDIT_OUTLINE}`, borderRadius: 3, textAlign: 'right' }}
+              />
+              <span style={{ fontSize: 11, color: 'var(--gray)' }}>/ {a.totalPoints}</span>
+            </div>
+            {hasOverride &&
+              (auto !== undefined ? (
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    setVal(key, String(auto))
+                    setEditingKey(null)
+                  }}
+                  style={revertBtn}
+                >
+                  ↺ auto {fmt(auto)}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onMouseDown={(e) => {
+                    e.preventDefault()
+                    setVal(key, '')
+                    setEditingKey(null)
+                  }}
+                  style={{ ...revertBtn, color: '#c0392b', borderColor: '#c0392b' }}
+                >
+                  Clear
+                </button>
+              ))}
+          </div>
+        </td>
+      )
     }
+
+    const tint = isDirty ? EDIT_TINT : hasOverride ? MANUAL_TINT : undefined
+    const outline = isDirty ? `2px solid ${EDIT_OUTLINE}` : undefined
+    return (
+      <td
+        key={a.id}
+        style={{ ...tdStyle, cursor: 'pointer', userSelect: 'none', background: tint, outline, outlineOffset: -2 }}
+        title={`Click to enter raw score out of ${a.totalPoints}`}
+        onClick={() => openCell(key)}
+      >
+        {hasOverride && !isDirty && <span style={{ color: 'var(--gold-dk)', marginRight: 3 }}>•</span>}
+        {display === '' ? (
+          <span style={{ color: 'var(--gray)' }}>—</span>
+        ) : (
+          <span style={{ color: pct !== null ? scoreColor(pct) : 'var(--ink)', fontWeight: 500 }}>{display}</span>
+        )}
+        <span style={{ color: 'var(--gray)', fontSize: 10 }}> / {a.totalPoints}</span>
+      </td>
+    )
   }
 
+  function marksFor(stu: SectionStudentRow) {
+    const cells: Record<string, number | null> = {}
+    for (const a of assessments) cells[a.assessmentId] = previewPct(stu, a)
+    return computeStudentMarks(cells, markAssessments, weights)
+  }
+
+  const colHead = (a: SectionAssessmentMeta, isFirst: boolean) => (
+    <th
+      key={a.id}
+      title={a.title}
+      style={{ ...thBase, background: typeBg(a.type), maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', borderLeft: isFirst ? '2px solid var(--green)' : undefined }}
+    >
+      <span style={{ color: 'var(--gray)', marginRight: 2 }}>[{typeTag(a.type)}]</span>
+      {a.title}
+    </th>
+  )
+
   return (
-    <div>
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'baseline',
-          gap: 8,
-          marginBottom: 10,
-          fontSize: 13,
-        }}
-      >
-        <strong style={{ color: 'var(--ink)' }}>
-          [{typeTag(meta.type)}] {meta.title}
-        </strong>
-        <span style={{ color: 'var(--gray)' }}>
-          {periodLabel(meta.period)} · out of {meta.totalPoints} pts
+    <div className="feu-card">
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 10 }}>
+        <h2 style={{ fontSize: 16, color: 'var(--green)', margin: 0 }}>Grade Editor</h2>
+        <span style={{ fontSize: 12, color: 'var(--gray)' }}>
+          click a cell to enter a raw score; MG / FG / Mark preview live
         </span>
       </div>
 
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', fontSize: 13, minWidth: 460 }}>
-          <thead>
-            <tr>
-              <th style={{ ...thStyle, textAlign: 'left', minWidth: 200 }}>Student</th>
-              <th style={{ ...thStyle, textAlign: 'left', minWidth: 110 }}>Student&nbsp;#</th>
-              <th style={{ ...thStyle, textAlign: 'center', minWidth: 150 }}>
-                Raw score / {meta.totalPoints}
-              </th>
-              <th style={{ ...thStyle, textAlign: 'left', minWidth: 90 }}>Auto</th>
-              <th style={{ ...thStyle, textAlign: 'left', minWidth: 70 }}></th>
-            </tr>
-          </thead>
-          <tbody>
-            {students.map((stu, i) => {
-              const auto = stu.autoRaw[aid]
-              const hasOverride = stu.rawOverrides[aid] !== undefined
-              const rowBg = i % 2 === 0 ? '#fff' : '#f8fbf9'
-              return (
-                <tr key={stu.studentId} style={{ background: rowBg, borderBottom: '1px solid var(--border)' }}>
-                  <td style={{ ...tdStyle, fontWeight: 500 }}>
-                    {stu.fullName || <span className="feu-muted">—</span>}
-                  </td>
-                  <td style={{ ...tdStyle, color: 'var(--gray)' }}>{stu.studentNumber ?? '—'}</td>
-                  <td style={{ ...tdStyle, textAlign: 'center' }}>
-                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.1}
-                        value={inputs[stu.studentId] ?? ''}
-                        disabled={busy}
-                        onChange={(e) =>
-                          setInputs((prev) => ({ ...prev, [stu.studentId]: e.target.value }))
-                        }
-                        style={{
-                          width: 70,
-                          padding: '4px 6px',
-                          fontSize: 13,
-                          border: `1.5px solid ${hasOverride ? 'var(--gold-dk)' : 'var(--border)'}`,
-                          borderRadius: 4,
-                          textAlign: 'right',
-                          background: '#fff',
-                        }}
-                      />
-                      <span style={{ fontSize: 12, color: 'var(--gray)' }}>/ {meta.totalPoints}</span>
-                    </div>
-                  </td>
-                  <td style={{ ...tdStyle, color: 'var(--gray)', fontSize: 12 }}>
-                    {auto !== undefined ? `auto ${fmt(auto)}` : '—'}
-                  </td>
-                  <td style={tdStyle}>
-                    {hasOverride && (
-                      <button
-                        type="button"
-                        onClick={() => handleRevert(stu.studentId)}
-                        disabled={busy}
-                        title="Revert to the auto-grade (delete this override)"
-                        style={{
-                          padding: '3px 8px',
-                          fontSize: 12,
-                          background: '#fff',
-                          color: 'var(--gold-dk)',
-                          border: '1px solid var(--gold-dk)',
-                          borderRadius: 4,
-                          cursor: busy ? 'default' : 'pointer',
-                          opacity: busy ? 0.6 : 1,
-                        }}
-                      >
-                        {reverting === stu.studentId ? '…' : '↺ revert'}
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              )
-            })}
-          </tbody>
-        </table>
-      </div>
+      {students.length === 0 && <p className="feu-muted">No students enrolled in this section.</p>}
+      {students.length > 0 && assessments.length === 0 && (
+        <p className="feu-muted">No assessments assigned yet.</p>
+      )}
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={busy}
-          style={{
-            padding: '7px 18px',
-            background: 'var(--green)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: 5,
-            fontSize: 13,
-            fontWeight: 600,
-            cursor: busy ? 'default' : 'pointer',
-            opacity: busy ? 0.6 : 1,
-          }}
-        >
-          {saving ? 'Saving…' : 'Save column'}
-        </button>
-        {error && <span style={{ color: '#c0392b', fontSize: 13 }}>{error}</span>}
-        {savedMsg && <span style={{ color: 'var(--gray)', fontSize: 13 }}>{savedMsg}</span>}
-      </div>
+      {students.length > 0 && assessments.length > 0 && (
+        <>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 12, whiteSpace: 'nowrap', minWidth: '100%' }}>
+              <thead>
+                <tr>
+                  <th rowSpan={2} style={{ ...thBase, textAlign: 'left', minWidth: 140 }}>
+                    Name
+                  </th>
+                  <th rowSpan={2} style={{ ...thBase, textAlign: 'left', minWidth: 90 }}>
+                    Student&nbsp;#
+                  </th>
+                  <th colSpan={mSpan} style={{ ...groupTh, background: '#c4e8d4', borderLeft: '2px solid var(--green)' }}>
+                    MIDTERM
+                  </th>
+                  <th colSpan={fSpan} style={{ ...groupTh, background: '#c4e8d4', borderLeft: '2px solid var(--green)' }}>
+                    FINAL
+                  </th>
+                  <th colSpan={2} style={{ ...groupTh, background: '#ffe99a', borderLeft: '2px solid var(--gold)' }}>
+                    COURSE GRADE
+                  </th>
+                </tr>
+                <tr>
+                  {midtermCols.map((a, i) => colHead(a, i === 0))}
+                  <th style={{ ...thBase, background: '#a8d8bc', fontWeight: 700, borderLeft: '1px solid #7bbfa0', textAlign: 'center', minWidth: 56 }}>
+                    MG
+                  </th>
+                  {finalCols.map((a, i) => colHead(a, i === 0))}
+                  <th style={{ ...thBase, background: '#a8d8bc', fontWeight: 700, borderLeft: '1px solid #7bbfa0', textAlign: 'center', minWidth: 56 }}>
+                    FG
+                  </th>
+                  <th style={{ ...thBase, background: '#fcd34d', fontWeight: 700, borderLeft: '2px solid var(--gold)', textAlign: 'center', minWidth: 66 }}>
+                    MARK
+                  </th>
+                  <th style={{ ...thBase, background: '#fcd34d', fontWeight: 700, textAlign: 'center', minWidth: 48 }}>
+                    LG
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {students.map((stu, i) => {
+                  const rowBg = i % 2 === 0 ? '#fff' : '#f8fbf9'
+                  const m = marksFor(stu)
+                  return (
+                    <tr key={stu.studentId} style={{ background: rowBg, borderBottom: '1px solid var(--border)' }}>
+                      <td
+                        style={{ ...tdStyle, fontWeight: 500, textAlign: 'left', position: 'sticky', left: 0, background: rowBg, zIndex: 1, borderRight: '1px solid var(--border)' }}
+                      >
+                        {stu.fullName || <span className="feu-muted">—</span>}
+                      </td>
+                      <td style={{ ...tdStyle, textAlign: 'left', color: 'var(--gray)', borderRight: '1px solid var(--border)' }}>
+                        {stu.studentNumber ?? '—'}
+                      </td>
+                      {midtermCols.map((a) => cell(stu, a))}
+                      <td style={{ ...tdStyle, fontWeight: 700, background: '#edf7f2', borderLeft: '1px solid #a8d4be', textAlign: 'center', color: m.midtermMark !== null ? scoreColor(m.midtermMark) : 'var(--gray)' }}>
+                        {markCell(m.midtermMark)}
+                      </td>
+                      {finalCols.map((a) => cell(stu, a))}
+                      <td style={{ ...tdStyle, fontWeight: 700, background: '#edf7f2', borderLeft: '1px solid #a8d4be', textAlign: 'center', color: m.finalMark !== null ? scoreColor(m.finalMark) : 'var(--gray)' }}>
+                        {markCell(m.finalMark)}
+                      </td>
+                      <td style={{ ...tdStyle, fontWeight: 700, background: '#fffce8', borderLeft: '2px solid var(--gold)', textAlign: 'center', color: m.courseMark !== null ? scoreColor(m.courseMark) : 'var(--gray)' }}>
+                        {markCell(m.courseMark)}
+                      </td>
+                      <td style={{ ...tdStyle, fontWeight: 700, background: '#fffce8', textAlign: 'center', color: letterColor(m.letter) }}>
+                        {m.letter ?? '—'}
+                        {m.qp !== null && <span style={{ fontSize: 10, color: 'var(--gray)', marginLeft: 3 }}>({m.qp.toFixed(1)})</span>}
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 14 }}>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving || entries.length === 0}
+              style={{
+                padding: '7px 18px',
+                background: 'var(--green)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: 5,
+                fontSize: 13,
+                fontWeight: 600,
+                cursor: saving || entries.length === 0 ? 'default' : 'pointer',
+                opacity: saving || entries.length === 0 ? 0.55 : 1,
+              }}
+            >
+              {saving ? 'Saving…' : `Save changes${entries.length ? ` (${entries.length} edited)` : ''}`}
+            </button>
+            {entries.length > 0 && !saving && (
+              <button
+                type="button"
+                onClick={() => {
+                  setEdits({})
+                  setEditingKey(null)
+                  setError(null)
+                  setMsg(null)
+                }}
+                style={{ padding: '7px 12px', background: '#fff', color: 'var(--gray)', border: '1px solid var(--border)', borderRadius: 5, fontSize: 13, cursor: 'pointer' }}
+              >
+                Discard
+              </button>
+            )}
+            {error && <span style={{ color: '#c0392b', fontSize: 13 }}>{error}</span>}
+            {msg && <span style={{ color: 'var(--gray)', fontSize: 13 }}>{msg}</span>}
+          </div>
+        </>
+      )}
     </div>
   )
 }
 
-// ── styles ─────────────────────────────────────────────────────────────────────
-
-const thStyle: React.CSSProperties = {
+const thBase: React.CSSProperties = {
   padding: '6px 10px',
   fontWeight: 600,
   fontSize: 11,
@@ -343,10 +427,26 @@ const thStyle: React.CSSProperties = {
   color: '#3c5a48',
   borderBottom: '2px solid var(--border)',
   background: '#f1f7f3',
+  verticalAlign: 'bottom',
 }
-
-const tdStyle: React.CSSProperties = {
-  padding: '6px 10px',
-  color: 'var(--ink)',
-  textAlign: 'left',
+const groupTh: React.CSSProperties = {
+  textAlign: 'center',
+  padding: '5px 10px',
+  fontWeight: 700,
+  fontSize: 11,
+  textTransform: 'uppercase',
+  letterSpacing: '1px',
+  color: '#3c5a48',
+  borderBottom: '1px solid var(--border)',
+}
+const tdStyle: React.CSSProperties = { padding: '7px 10px', color: 'var(--ink)', textAlign: 'right' }
+const revertBtn: React.CSSProperties = {
+  padding: '1px 6px',
+  fontSize: 10,
+  background: '#fff',
+  color: 'var(--gold-dk)',
+  border: '1px solid var(--gold-dk)',
+  borderRadius: 3,
+  cursor: 'pointer',
+  whiteSpace: 'nowrap',
 }

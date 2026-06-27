@@ -3,7 +3,8 @@ import { createClient } from '@/lib/supabase/server'
 import { listClasses } from '@/app/actions/listClasses'
 import { getSectionGrades } from '@/app/actions/getSectionGrades'
 import { SectionPicker } from './SectionPicker'
-import { GradesView } from './GradesView'
+import { GradeSheet } from './GradeSheet'
+import { GradeEditor } from './GradeEditor'
 
 export default async function GradesPage({
   searchParams,
@@ -51,7 +52,12 @@ export default async function GradesPage({
         </p>
       )}
 
-      {grades && <GradesView grades={grades} classId={classId!} />}
+      {grades && (
+        <>
+          <GradeSheet grades={grades} />
+          <GradeEditor grades={grades} classId={classId!} />
+        </>
+      )}
     </div>
   )
 }
