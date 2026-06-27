@@ -119,3 +119,15 @@ Large autonomous build. Branch ~45 commits beyond main. Verified: **231 tests gr
 - **Perf:** `getSectionGrades` does ~5 sequential cloud queries — parallelize with `Promise.all` to speed up the grades page. (Dev-mode + cloud latency is the main slowness; production/Vercel is much faster.)
 
 ## ▶▶ FIRST TASK WHEN RESUMING (user directive 2026-06-27): build the **grade editor** (the two-table Grades split described in "NEXT-SESSION feature" above) BEFORE anything else. Then Theme D / hardening.
+
+### Test data: INTENTIONALLY KEPT (user still testing — 2026-06-28)
+The 6 Smoke Student accounts (+smoke emails / SMOKE-* numbers), SMOKE101 course/class, and "Homework Smoke 1" are deliberately retained for now. Do NOT clean them until the user says so. When ready, the SCOPED, verified-safe cleanup (cannot touch Mamoun/Benjie/AMS0011) is:
+```sql
+delete from auth.users where email ilike '%+smoke%';
+delete from public.courses where code = 'SMOKE101';
+delete from public.assessments where title ilike 'Homework Smoke%';
+```
+Note: the user's earlier (unscoped) "Clean Test Data" query did NOT remove these but DID delete a stale grade_override — which fortuitously fixed a bug (see below).
+
+### Resolved 2026-06-28: Mamoun's quiz showed 311% — fixed (data, not code)
+Cause: a leftover grade_override (score=93.33) created under the pre-M3 "%-as-override" meaning; M3's new raw/total_points math read it as 93.33÷30×100=311%. The override is now deleted, so Mamoun shows his correct auto-grade (28/30 = 93.33%). FOLLOW-UPS for the grade-editor task: (1) clearing a grade cell should DELETE the override (revert to auto) — there's currently no UI to undo an override; (2) the M3 semantic change can mis-read any override stored before it — sweep for others (likely none left).
