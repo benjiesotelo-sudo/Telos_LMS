@@ -3,7 +3,7 @@ import { Sidebar } from '@/app/components/Sidebar'
 
 const BASE_ITEMS = [
   { href: '/instructor', label: 'Dashboard' },
-  { href: '/instructor/classes', label: 'Classes' },
+  { href: '/instructor/classes', label: 'Courses & Classes' },
   { href: '/instructor/builder', label: 'Course Builder' },
   { href: '/instructor/enrollment', label: 'Enrollment' },
   { href: '/instructor/assessments', label: 'Assessments' },
