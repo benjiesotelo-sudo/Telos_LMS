@@ -213,7 +213,7 @@ export function GradeSheet({ grades, classId }: Props) {
       >
         <span>
           <strong style={{ color: 'var(--ink)' }}>Grade weights:</strong>&nbsp; Quizzes&nbsp;
-          {wtQuiz}%&nbsp;·&nbsp;Papers/HW&nbsp;{wtPaper}%&nbsp;·&nbsp;Exam&nbsp;{wtExam}%
+          {Math.round(wtQuiz * 100)}%&nbsp;·&nbsp;Papers/HW&nbsp;{Math.round(wtPaper * 100)}%&nbsp;·&nbsp;Exam&nbsp;{Math.round(wtExam * 100)}%
         </span>
         <span style={{ color: 'var(--gray)' }}>
           [Q]&nbsp;=&nbsp;Quiz &nbsp;·&nbsp; [P]&nbsp;=&nbsp;Paper/Activity &nbsp;·&nbsp;
