@@ -12,6 +12,8 @@ export interface SetAssignmentMetaInput {
   opensAt?: string | null
   closesAt?: string | null
   dueDate?: string | null
+  // Per-attempt time limit (minutes); null = untimed/clear.
+  durationMinutes?: number | null
 }
 
 export async function setAssignmentMeta(input: SetAssignmentMetaInput): Promise<{ ok: true }> {
@@ -50,6 +52,9 @@ export async function setAssignmentMeta(input: SetAssignmentMetaInput): Promise<
   if (input.opensAt !== undefined) update.opens_at = input.opensAt
   if (input.closesAt !== undefined) update.closes_at = input.closesAt
   if (input.dueDate !== undefined) update.due_date = input.dueDate
+  if (input.durationMinutes !== undefined)
+    update.duration_minutes =
+      input.durationMinutes != null && input.durationMinutes > 0 ? Math.round(input.durationMinutes) : null
 
   if (Object.keys(update).length > 0) {
     const { error: updErr } = await admin

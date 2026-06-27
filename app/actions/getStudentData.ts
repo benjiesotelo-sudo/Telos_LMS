@@ -69,7 +69,7 @@ async function loadStudentClassData(studentId: string, onlyClassId?: string) {
       .in('id', classIds),
     admin
       .from('assignments')
-      .select('id, class_id, assessment_id, period, active, reveal_answers, opens_at, closes_at, due_date, assessment:assessment_id(title, type, total_points, is_manual)')
+      .select('id, class_id, assessment_id, period, active, reveal_answers, opens_at, closes_at, due_date, duration_minutes, assessment:assessment_id(title, type, total_points, is_manual, default_duration_minutes)')
       .in('class_id', classIds),
   ])
   if (clsErr) throw new Error(`Failed to load classes: ${clsErr.message}`)
@@ -132,7 +132,7 @@ function buildTask(a: any, subMap: Map<string, any>, overrideMap: Map<string, nu
     opensAt: a.opens_at ?? null,
     closesAt: a.closes_at ?? null,
     dueDate: a.due_date ?? null,
-    durationMinutes: null, // wired by the timer task
+    durationMinutes: (a.duration_minutes ?? asmt.default_duration_minutes ?? null) as number | null,
     submissionId: sub?.id ?? null,
     submitted: sub != null,
     graded,

@@ -8,17 +8,32 @@ import { isValidNumericInput } from '@/lib/utils/numeric'
 interface Props {
   assignmentId: string
   questions: Question[]
+  /** ISO deadline for a timed attempt (null = untimed). */
+  deadline?: string | null
 }
 
 const STORAGE_KEY = (id: string) => `telos-take-${id}`
 const DEBOUNCE_MS = 400
 
-export default function TakeForm({ assignmentId, questions }: Props) {
+function fmtRemaining(ms: number): string {
+  const total = Math.max(0, Math.floor(ms / 1000))
+  const m = Math.floor(total / 60)
+  const s = total % 60
+  return `${m}:${String(s).padStart(2, '0')}`
+}
+
+export default function TakeForm({ assignmentId, questions, deadline = null }: Props) {
   const router = useRouter()
   const [answers, setAnswers] = useState<Record<string, string>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const answersRef = useRef(answers)
+  answersRef.current = answers
+  const submittedRef = useRef(false)
+  const [remainingMs, setRemainingMs] = useState<number | null>(
+    deadline ? Math.max(0, new Date(deadline).getTime() - Date.now()) : null,
+  )
 
   // Restore saved answers on mount
   useEffect(() => {
@@ -41,23 +56,67 @@ export default function TakeForm({ assignmentId, questions }: Props) {
     saveAnswers(next)
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const doSubmit = useCallback(async (auto: boolean) => {
+    if (submittedRef.current) return
+    submittedRef.current = true
     setIsSubmitting(true)
     setError(null)
     try {
-      const res = await submitAssessment({ assignmentId, answers })
-      // Clear saved answers on successful submit
+      const res = await submitAssessment({ assignmentId, answers: answersRef.current })
       try { localStorage.removeItem(STORAGE_KEY(assignmentId)) } catch { /* ignore */ }
       router.push(`/student/results/${res.submissionId}`)
     } catch (err) {
+      submittedRef.current = false
       setIsSubmitting(false)
-      setError(err instanceof Error ? err.message : 'Submission failed. Please try again.')
+      setError(
+        (auto ? 'Time is up — auto-submit failed. ' : '') +
+          (err instanceof Error ? err.message : 'Submission failed. Please try again.'),
+      )
     }
+  }, [assignmentId, router])
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault()
+    doSubmit(false)
   }
+
+  // Countdown + auto-submit for timed attempts.
+  useEffect(() => {
+    if (!deadline) return
+    const end = new Date(deadline).getTime()
+    const tick = () => {
+      const ms = end - Date.now()
+      setRemainingMs(Math.max(0, ms))
+      if (ms <= 0) doSubmit(true)
+    }
+    tick()
+    const iv = setInterval(tick, 1000)
+    return () => clearInterval(iv)
+  }, [deadline, doSubmit])
 
   return (
     <form onSubmit={handleSubmit}>
+      {remainingMs !== null && (
+        <div
+          style={{
+            position: 'sticky',
+            top: 0,
+            zIndex: 5,
+            marginBottom: 14,
+            padding: '10px 14px',
+            borderRadius: 6,
+            textAlign: 'center',
+            fontWeight: 700,
+            fontSize: 15,
+            border: '1px solid',
+            background: remainingMs <= 60_000 ? '#fdecea' : '#f1f7f3',
+            color: remainingMs <= 60_000 ? '#c0392b' : 'var(--green)',
+            borderColor: remainingMs <= 60_000 ? '#c0392b' : 'var(--green)',
+          }}
+        >
+          {remainingMs <= 0 ? 'Time is up — submitting…' : `Time remaining: ${fmtRemaining(remainingMs)}`}
+        </div>
+      )}
       {questions.map((q) => (
         <div key={q.id} className="feu-card">
           <div style={{ fontWeight: 600, marginBottom: 10 }}>

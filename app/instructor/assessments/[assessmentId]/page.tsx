@@ -2,6 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAssessmentKey } from '@/app/actions/getAssessmentKey'
+import { DurationSetting } from './DurationSetting'
 
 export default async function AssessmentPreviewPage({
   params,
@@ -39,6 +40,14 @@ export default async function AssessmentPreviewPage({
 
   const { title, type, questions, answerKey } = detail
 
+  // Current default time limit (instructor owns the row → RLS allows the read).
+  const { data: durRow } = await supabase
+    .from('assessments')
+    .select('default_duration_minutes')
+    .eq('id', assessmentId)
+    .maybeSingle()
+  const defaultDuration = (durRow?.default_duration_minutes ?? null) as number | null
+
   const typeLabel: Record<string, string> = {
     quiz:     'Quiz',
     activity: 'Paper / Activity',
@@ -73,9 +82,14 @@ export default async function AssessmentPreviewPage({
             {typeLabel[type] ?? type}
           </span>
         </div>
-        <p className="feu-muted" style={{ fontSize: 13, margin: 0 }}>
+        <p className="feu-muted" style={{ fontSize: 13, margin: '0 0 14px' }}>
           Answer key preview &mdash; instructor view only
         </p>
+        {type !== 'activity' && (
+          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
+            <DurationSetting assessmentId={assessmentId} current={defaultDuration} />
+          </div>
+        )}
       </section>
 
       {/* Questions */}
