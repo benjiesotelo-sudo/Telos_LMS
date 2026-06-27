@@ -32,6 +32,47 @@ function ReadCell({
   )
 }
 
+function csvEscape(x: string | number): string {
+  const s = String(x)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+function exportCsv(grades: SectionGrades) {
+  const { midtermCols, finalCols } = splitPeriods(grades.assessments)
+  const cols = [...midtermCols, ...finalCols]
+  const header = [
+    'Name',
+    'Student #',
+    ...cols.map((c) => `${c.title} (%)`),
+    'Midterm',
+    'Final',
+    'Course Mark',
+    'Letter',
+    'QP',
+  ]
+  const rows = grades.students.map((s) => [
+    s.fullName,
+    s.studentNumber ?? '',
+    ...cols.map((c) => {
+      const v = s.cells[c.assessmentId]
+      return v == null ? '' : v.toFixed(2)
+    }),
+    s.midtermMark != null ? s.midtermMark.toFixed(2) : '',
+    s.finalMark != null ? s.finalMark.toFixed(2) : '',
+    s.courseMark != null ? s.courseMark.toFixed(2) : '',
+    s.letter ?? '',
+    s.qp != null ? String(s.qp) : '',
+  ])
+  const csv = [header, ...rows].map((r) => r.map(csvEscape).join(',')).join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${grades.class.displayName.replace(/[^\w.-]+/g, '_')}-grades.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function GradeSheet({ grades }: { grades: SectionGrades }) {
   const { class: cls, assessments, students } = grades
   const { midtermCols, finalCols } = splitPeriods(assessments)
@@ -74,6 +115,16 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
         <span style={{ fontSize: 12, color: 'var(--gray)' }}>
           {students.length} student{students.length !== 1 ? 's' : ''}
         </span>
+        {students.length > 0 && assessments.length > 0 && (
+          <button
+            type="button"
+            onClick={() => exportCsv(grades)}
+            className="feu-btn-outline"
+            style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 12px' }}
+          >
+            Export CSV
+          </button>
+        )}
       </div>
 
       <div
