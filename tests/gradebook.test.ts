@@ -6,6 +6,7 @@ import {
   periodMark,
   courseMark,
   gradeFor,
+  computeStudentMarks,
 } from '@/lib/gradebook'
 
 // ---------------------------------------------------------------------------
@@ -206,6 +207,35 @@ describe('gradeFor', () => {
   })
   it('49.4 → { mark:49, letter:"F", qp:0.0 }', () => {
     expect(gradeFor(49.4)).toEqual({ mark: 49, letter: 'F', qp: 0.0 })
+  })
+})
+
+// ---------------------------------------------------------------------------
+// computeStudentMarks — shared per-student marks (server + client preview)
+// ---------------------------------------------------------------------------
+describe('computeStudentMarks', () => {
+  const weights = { wtQuiz: 0.3, wtPaper: 0.2, wtExam: 0.5 }
+  const assessments = [
+    { assessmentId: 'q', type: 'quiz' as const, period: 'midterm' as const },
+    { assessmentId: 'p', type: 'activity' as const, period: 'midterm' as const },
+    { assessmentId: 'e', type: 'exam' as const, period: 'midterm' as const },
+  ]
+
+  it('computes midterm/course mark + letter from cells (quizzes 80, papers 75, exam 90)', () => {
+    const m = computeStudentMarks({ q: 80, p: 75, e: 90 }, assessments, weights)
+    expect(m.midtermMark).toBe(84)   // 80*.3 + 75*.2 + 90*.5
+    expect(m.finalMark).toBeNull()   // no final assessments
+    expect(m.courseMark).toBe(84)    // one-period pass-through
+    expect(m.letter).toBe('B')
+    expect(m.qp).toBe(3.0)
+  })
+
+  it('all-null cells → null marks and no letter', () => {
+    const m = computeStudentMarks({ q: null, p: null, e: null }, assessments, weights)
+    expect(m.midtermMark).toBeNull()
+    expect(m.courseMark).toBeNull()
+    expect(m.letter).toBeNull()
+    expect(m.qp).toBeNull()
   })
 })
 

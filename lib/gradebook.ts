@@ -180,3 +180,78 @@ export function gradeFor(pct: number | null): GradeResult | null {
   const { letter, qp } = transmute(mark)
   return { mark, letter, qp }
 }
+
+// ---------------------------------------------------------------------------
+// computeStudentMarks — per-student MG/FG/Course/letter from cell percentages
+// ---------------------------------------------------------------------------
+
+export interface StudentMarks {
+  midtermMark: number | null
+  finalMark:   number | null
+  courseMark:  number | null
+  letter:      string | null
+  qp:          number | null
+}
+
+export interface MarkAssessment {
+  assessmentId: string
+  type:   'activity' | 'quiz' | 'exam'
+  period: 'midterm' | 'final'
+}
+
+/**
+ * Pure per-student mark computation, shared by getSectionGrades (server) and the
+ * Grade Editor live preview (client). `cells` maps assessmentId → cell percentage
+ * (null/undefined = no score). Groups non-null cells by period + category, then
+ * applies the FEU period/course/letter math from this module — so the editor's
+ * live preview can never drift from the saved computation.
+ */
+export function computeStudentMarks(
+  cells: Record<string, number | null>,
+  assessments: MarkAssessment[],
+  weights: { wtQuiz: number; wtPaper: number; wtExam: number },
+): StudentMarks {
+  const groups: Record<
+    'midterm' | 'final',
+    { quizzes: number[]; papers: number[]; exam: number[] }
+  > = {
+    midterm: { quizzes: [], papers: [], exam: [] },
+    final:   { quizzes: [], papers: [], exam: [] },
+  }
+
+  for (const a of assessments) {
+    const val = cells[a.assessmentId]
+    if (val === null || val === undefined) continue
+    const g = groups[a.period]
+    if      (a.type === 'quiz')     g.quizzes.push(val)
+    else if (a.type === 'activity') g.papers.push(val)
+    else if (a.type === 'exam')     g.exam.push(val)
+  }
+
+  const midtermMark = periodMark(
+    {
+      quizzes: categoryAverage(groups.midterm.quizzes),
+      papers:  categoryAverage(groups.midterm.papers),
+      exam:    categoryAverage(groups.midterm.exam),
+    },
+    weights,
+  )
+  const finalMark = periodMark(
+    {
+      quizzes: categoryAverage(groups.final.quizzes),
+      papers:  categoryAverage(groups.final.papers),
+      exam:    categoryAverage(groups.final.exam),
+    },
+    weights,
+  )
+  const cm    = courseMark(midtermMark, finalMark)
+  const grade = gradeFor(cm)
+
+  return {
+    midtermMark,
+    finalMark,
+    courseMark: cm,
+    letter: grade?.letter ?? null,
+    qp:     grade?.qp     ?? null,
+  }
+}

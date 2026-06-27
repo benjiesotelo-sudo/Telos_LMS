@@ -1,11 +1,6 @@
 'use server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import {
-  categoryAverage,
-  periodMark,
-  courseMark,
-  gradeFor,
-} from '@/lib/gradebook'
+import { computeStudentMarks } from '@/lib/gradebook'
 import type { SectionGrades, SectionAssessmentMeta, SectionStudentRow } from '@/lib/types'
 
 export async function getSectionGrades(input: {
@@ -174,46 +169,8 @@ export async function getSectionGrades(input: {
       }
     }
 
-    // --- group non-null cells by period + category ---
-    const groups: Record<
-      'midterm' | 'final',
-      { quizzes: number[]; papers: number[]; exam: number[] }
-    > = {
-      midterm: { quizzes: [], papers: [], exam: [] },
-      final:   { quizzes: [], papers: [], exam: [] },
-    }
-
-    for (const asmt of assessmentMetas) {
-      const val = cells[asmt.assessmentId]
-      if (val === null) continue
-      const g = groups[asmt.period]
-      if      (asmt.type === 'quiz')     g.quizzes.push(val)
-      else if (asmt.type === 'activity') g.papers.push(val)
-      else if (asmt.type === 'exam')     g.exam.push(val)
-    }
-
-    // --- period marks (uses lib/gradebook — no re-derived math) ---
-    const midtermMark = periodMark(
-      {
-        quizzes: categoryAverage(groups.midterm.quizzes),
-        papers:  categoryAverage(groups.midterm.papers),
-        exam:    categoryAverage(groups.midterm.exam),
-      },
-      weights,
-    )
-
-    const finalMark = periodMark(
-      {
-        quizzes: categoryAverage(groups.final.quizzes),
-        papers:  categoryAverage(groups.final.papers),
-        exam:    categoryAverage(groups.final.exam),
-      },
-      weights,
-    )
-
-    // --- course mark + letter ---
-    const cm    = courseMark(midtermMark, finalMark)
-    const grade = gradeFor(cm)
+    // --- marks (shared pure fn — single source of truth) ---
+    const marks = computeStudentMarks(cells, assessmentMetas, weights)
 
     return {
       studentId:     stu.studentId,
@@ -222,11 +179,11 @@ export async function getSectionGrades(input: {
       cells,
       rawOverrides,
       autoRaw,
-      midtermMark,
-      finalMark,
-      courseMark:    cm,
-      letter:        grade?.letter ?? null,
-      qp:            grade?.qp     ?? null,
+      midtermMark: marks.midtermMark,
+      finalMark:   marks.finalMark,
+      courseMark:  marks.courseMark,
+      letter:      marks.letter,
+      qp:          marks.qp,
     }
   })
 
