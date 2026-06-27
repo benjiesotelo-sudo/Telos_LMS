@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getClassDetail } from '@/app/actions/getClassDetail'
 import { AssignmentMetaControls } from '@/app/instructor/AssignmentMetaControls'
 import { ClassWeightsForm } from '@/app/instructor/ClassWeightsForm'
+import { ClassSettingsForm } from '@/app/instructor/ClassSettingsForm'
 
 export default async function ClassDetailPage({
   params,
@@ -49,8 +50,11 @@ export default async function ClassDetailPage({
     <div className="feu-page">
       {/* Back nav */}
       <p style={{ marginBottom: 8 }}>
-        <Link href="/instructor/classes" style={{ color: 'var(--green)', fontSize: 13 }}>
-          &larr; All Classes
+        <Link
+          href={`/instructor/classes?course=${cls.courseId}`}
+          style={{ color: 'var(--green)', fontSize: 13 }}
+        >
+          &larr; Back to Sections
         </Link>
       </p>
 
@@ -174,7 +178,7 @@ export default async function ClassDetailPage({
       </section>
 
       {/* ── Weights editor ───────────────────────────────────────────────── */}
-      <section className="feu-card" aria-labelledby="weights-h">
+      <section className="feu-card" aria-labelledby="weights-h" style={{ marginBottom: 20 }}>
         <h2 id="weights-h" style={{ fontSize: 16, marginBottom: 14, color: 'var(--green)' }}>
           Grade Weights
         </h2>
@@ -183,6 +187,21 @@ export default async function ClassDetailPage({
           wtQuiz={cls.weights.wtQuiz}
           wtPaper={cls.weights.wtPaper}
           wtExam={cls.weights.wtExam}
+        />
+      </section>
+
+      {/* ── Class settings ───────────────────────────────────────────────── */}
+      <section className="feu-card" aria-labelledby="settings-h">
+        <h2 id="settings-h" style={{ fontSize: 16, marginBottom: 4, color: 'var(--green)' }}>
+          Class Settings
+        </h2>
+        <p className="feu-muted" style={{ fontSize: 12, marginBottom: 14 }}>
+          Change the academic period or section label for this class.
+        </p>
+        <ClassSettingsForm
+          classId={classId}
+          period={cls.period}
+          sectionLabel={cls.sectionLabel}
         />
       </section>
     </div>

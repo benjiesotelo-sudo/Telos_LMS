@@ -23,7 +23,7 @@ export async function getClassDetail(input: { classId: string }): Promise<ClassD
   const { data: cls, error: clsErr } = await admin
     .from('classes')
     .select(
-      'id, instructor_id, wt_quiz, wt_paper, wt_exam, period, section_label, pic, course:course_id(code, title)',
+      'id, course_id, instructor_id, wt_quiz, wt_paper, wt_exam, period, section_label, pic, course:course_id(code, title)',
     )
     .eq('id', input.classId)
     .single()
@@ -81,6 +81,7 @@ export async function getClassDetail(input: { classId: string }): Promise<ClassD
   return {
     class: {
       id:           input.classId,
+      courseId:     (cls as any).course_id as string,
       displayName,
       code:         course?.code  ?? '',
       title:        course?.title ?? '',

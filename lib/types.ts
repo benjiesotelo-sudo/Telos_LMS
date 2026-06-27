@@ -171,6 +171,7 @@ export interface ClassDetailStudent {
 export interface ClassDetail {
   class: {
     id: string
+    courseId: string
     displayName: string
     code: string
     title: string
