@@ -118,7 +118,7 @@ Large autonomous build. Branch ~45 commits beyond main. Verified: **231 tests gr
 - Files: `app/instructor/grades/GradeSheet.tsx` (split into a read-only sheet + a `GradeEditor` component), `app/instructor/grades/page.tsx`. Data already in `getSectionGrades` (`cells` %, `rawOverrides`, `totalPoints` per assessment).
 - **Perf:** `getSectionGrades` does ~5 sequential cloud queries — parallelize with `Promise.all` to speed up the grades page. (Dev-mode + cloud latency is the main slowness; production/Vercel is much faster.)
 
-## ✅ GRADE EDITOR — REDESIGNED to two-grid layout (2026-06-28) on branch `feat/grade-editor` (verified; NOT merged to main)
+## ✅ GRADE EDITOR — REDESIGNED to two-grid layout (2026-06-28) — MERGED to `main` + pushed (Vercel auto-deploying)
 After trying the first cut (per-assessment dropdown editor), the user asked for a grid that mirrors the sheet + safe revert. Final shape (spec `docs/superpowers/specs/2026-06-28-grade-editor-grid-redesign-design.md`, plan `docs/superpowers/plans/2026-06-28-grade-editor-grid-redesign.md`):
 - **Grade Sheet (top, read-only):** heading "Grade Sheet"; computed FEU table with **`%` signs** on every value (cells + MG/FG/Course Mark); numbers score-colored; **amber tint + `•` dot** marks any hand-edited grade so you can see at a glance which were manual vs auto.
 - **Grade Editor (bottom, editable):** a full grid **identical in columns** to the sheet. **Every assessment cell is always an input** `raw /total` (no click-to-edit — user preference 2026-06-28; Tab moves across cells), prefilled with current effective score (override → auto → blank). **MG/FG/Course Mark/LG recompute LIVE** as you type. Edited cells get a blue outline (saved manual grades show amber tint + a `•`); one **Save changes (N edited)** button batches all edits across many cells/assessments in one write; a **Discard** link resets. **Safe revert** appears only on overridden cells: online → `↺` (revert to auto); manual → `✕` (clear) with a single **Save-time confirm** before erasing a manual-only score.
@@ -132,10 +132,12 @@ Verified: **239 tests green** (was 237; +2 `computeStudentMarks`), **`npm run bu
 - Kept from the first cut: per-student `autoRaw` in `getSectionGrades` (+ parallelized reads); `deleteGradeOverride` action (now unused by the UI — reverts go through the batch Save — but retained + tested).
 - **≠-auto rule (Mamoun-311% safeguard) preserved:** an override is written only when the entered value differs from the auto value; matching auto / clearing deletes it.
 
-### LEFT TO DO (grade editor)
-- **User's check** pending: open Grades → pick a section → click cells to edit, watch MG/Mark preview live, Save; try ↺ revert (online) and Clear (manual, confirm). Confirm amber marks the hand-edited cells on the Grade Sheet.
-- **Merge** `feat/grade-editor` → `main` when satisfied (no new migrations — all additive code; cloud DB already at 0010). Run `npm test` on merged main, push (Vercel auto-deploys).
-- Then **Theme D** (student experience) / hardening.
+### SHIPPED
+Merged `feat/grade-editor` → `main` and pushed (commit `3e7823d`; 8 grade-editor commits + 3 prior unpushed docs commits). 239 tests green on merged main; build clean. No new migrations — additive code only; cloud DB already at 0010. Vercel auto-deploys `main` → https://telos-lms.vercel.app. Local feature branch deleted.
+
+### NEXT
+- **Verify the live deploy** once Vercel finishes: open https://telos-lms.vercel.app/instructor/grades on a real section and spot-check the editor.
+- Then **Theme D** (student experience: dashboards, view classes/details, pre-quiz screen, live timer + auto-submit) / hardening (see Slice 2 backlog above).
 
 ### Test data: INTENTIONALLY KEPT (user still testing — 2026-06-28)
 The 6 Smoke Student accounts (+smoke emails / SMOKE-* numbers), SMOKE101 course/class, and "Homework Smoke 1" are deliberately retained for now. Do NOT clean them until the user says so. When ready, the SCOPED, verified-safe cleanup (cannot touch Mamoun/Benjie/AMS0011) is:
