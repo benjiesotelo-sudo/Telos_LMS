@@ -111,3 +111,9 @@ Large autonomous build. Branch ~45 commits beyond main. Verified: **231 tests gr
 ### DEV-MODE GOTCHA (not a bug): long-running `next dev` + an open tab loops repeated GETs after many hot-reloads (esp. while files are being edited). e2e on a fresh browser = 0 loops; production (built app) unaffected. Fix: restart `npm run dev` + hard-reload (Cmd+Shift+R).
 
 ### AGENTS.md rules added this session: (1) no frozen-looking screens (loading.tsx + pending buttons); (2) `'use server'` files may export ONLY async actions — never a const/array (a client import of such a const crashes at runtime while the build still passes).
+
+### NEXT-SESSION feature: split the Grades view into two tables (requested 2026-06-27)
+- **Top = Grade Sheet (read-only):** the existing FEU computed table (category %s → MG/FG → Course MARK + LG). The submit-report; remove inline editing from it.
+- **Bottom = Grade Editor (editable):** a separate table, rows = students, columns = each assessment, each cell shows **raw score / max points** (e.g. `85 / 100`) and is editable. Editing sets the grade_override (raw, out of `total_points`); it flows up into the top sheet (server `refresh()`). Online auto-graded items show their auto score/possible; manual items show the entered score/total_points.
+- Files: `app/instructor/grades/GradeSheet.tsx` (split into a read-only sheet + a `GradeEditor` component), `app/instructor/grades/page.tsx`. Data already in `getSectionGrades` (`cells` %, `rawOverrides`, `totalPoints` per assessment).
+- **Perf:** `getSectionGrades` does ~5 sequential cloud queries — parallelize with `Promise.all` to speed up the grades page. (Dev-mode + cloud latency is the main slowness; production/Vercel is much faster.)
