@@ -137,7 +137,46 @@ Merged `feat/grade-editor` → `main` and pushed (commit `3e7823d`; 8 grade-edit
 
 ### NEXT
 - **Verify the live deploy** once Vercel finishes: open https://telos-lms.vercel.app/instructor/grades on a real section and spot-check the editor.
-- Then **Theme D** (student experience: dashboards, view classes/details, pre-quiz screen, live timer + auto-submit) / hardening (see Slice 2 backlog above).
+
+## 📋 REMAINING LMS WORK — canonical checklist (2026-06-28)
+Single source of truth for what's left to build. Order reflects "student experience first."
+
+### Features to build
+1. **Theme D — Student experience** (in progress, branch `feat/theme-d-student`):
+   - **Dashboard = My Classes**, each class showing its tasks (homework / quiz / exam; room for future "materials" e.g. blogs) + a **per-class to-do**.
+   - **To-Do page** (own page): all pending tasks across classes, by deadline.
+   - **Grades page** (own page): read-only version of the instructor FEU breakdown, scoped to the student's own grades.
+   - **Class detail (student):** tasks grouped by type, deadlines/timer, status (to-do / submitted / graded), links to take or to **review answers** when revealed.
+   - **Pre-quiz screen** before a timed assessment.
+2. **Quiz timer + live countdown + auto-submit:**
+   - **Default duration on the assessment** (assessment settings); per-section **assignment.duration_minutes** pre-fills from the default, editable at assign time; untouched = default; none = untimed.
+   - Timer **starts on first open and keeps running** across refresh/close (server stores `started_at`); effective deadline = `started_at + duration`. At zero, **auto-submit** whatever's entered. Server rejects submits past the effective deadline. (Limitation: a never-reopened tab stays `in_progress` until a server sweep — hardening follow-up.)
+3. **Student answer review:** reveal rule = instructor per-quiz toggle ON + graded, then **homework reveals immediately**; **quiz/exam reveal only after the close date** (show an instructor hint that a quiz/exam needs a close date to ever reveal). Wire **review links from the class view**; students can revisit revealed items anytime. (`getRevealedAnswers` already exists — change its gate to be type-aware.)
+4. **Invite existing users to a class + in-app invites:** instructor searches existing student accounts by **name / email / student #** → creates an invite (`enrollments.status='invited'`, + `invited_by`). Student sees a **"Class invites"** area + count badge on the dashboard → **Accept** (status='active') / **Decline** (delete). Block if already enrolled/invited.
+5. **Manage students + removal-request approval:** instructor can request to **remove** a student from a class, **with a reason** → goes to an **admin review panel** → admin **Approve** (deletes the class enrollment; submissions/grades kept) / **Reject**. Instructor sees pending/approved/rejected status on the class page. (New table, e.g. `enrollment_removal_requests`.)
+6. **Gradebook CSV export:** export the computed FEU grade sheet per section.
+
+### Hardening (cross-cutting — fold in as touched)
+- Server-side auto-save + cross-device resume (today localStorage only).
+- Status enforcement on data path: `is_active()` SECURITY DEFINER AND-ed into student read policies + status re-check in `getTakePayload` & `submitAssessment`.
+- Transactional `importAssessment` (RPC or compensating delete).
+- BEFORE-UPDATE role trigger on `profiles` (regression-proof the no-self-promote guard).
+- Duplicate-invite guard on enrollment.
+- N+1 student-dashboard query; instructor enroll/assign panels default to first course only.
+- `middleware` → `proxy` rename.
+
+### Smaller deferred follow-ups
+- Section-picker at approval for general-link registrants who joined with no section.
+- Tidy swallowed `profiles`-query errors in Theme B actions.
+
+### Cloud/ops (run in Supabase dashboard — Benjie's hands, not code)
+- Schedule `purge_expired_pending()` via pg_cron.
+- DB unique index on `profiles.student_number`.
+- `handle_new_user` trigger: keep signups OFF or force `role=student` before opening registration.
+- Save admin SQL snippets: `List Users`, `Clean Test Data`, `Health Check`, `1st Setup`.
+
+### Out of session scope (decision, not a build) — tracked in AIS-OS log
+- Whether `projects/Telos_AMS0011` should graduate to its own repo (owner: Benjie).
 
 ### Test data: INTENTIONALLY KEPT (user still testing — 2026-06-28)
 The 6 Smoke Student accounts (+smoke emails / SMOKE-* numbers), SMOKE101 course/class, and "Homework Smoke 1" are deliberately retained for now. Do NOT clean them until the user says so. When ready, the SCOPED, verified-safe cleanup (cannot touch Mamoun/Benjie/AMS0011) is:
