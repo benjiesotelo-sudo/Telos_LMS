@@ -5,6 +5,7 @@ import { getClassDetail } from '@/app/actions/getClassDetail'
 import { AssignmentMetaControls } from '@/app/instructor/AssignmentMetaControls'
 import { ClassWeightsForm } from '@/app/instructor/ClassWeightsForm'
 import { ClassSettingsForm } from '@/app/instructor/ClassSettingsForm'
+import { InviteStudent } from './InviteStudent'
 
 export default async function ClassDetailPage({
   params,
@@ -175,6 +176,8 @@ export default async function ClassDetailPage({
             </tbody>
           </table>
         </div>
+
+        <InviteStudent classId={cls.id} />
       </section>
 
       {/* ── Weights editor ───────────────────────────────────────────────── */}

@@ -2,19 +2,23 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getStudentOverview } from '@/app/actions/getStudentData'
+import { getMyInvites } from '@/app/actions/invites'
 import { GroupedTaskList } from './TaskList'
+import { InvitesPanel } from './InvitesPanel'
 
 export default async function StudentDashboard() {
   const supabase = await createClient()
   const { data: auth } = await supabase.auth.getUser()
   if (!auth.user) redirect('/login')
 
-  const { classes } = await getStudentOverview()
+  const [{ classes }, invites] = await Promise.all([getStudentOverview(), getMyInvites()])
 
   return (
     <div className="feu-page">
       <h1>Dashboard</h1>
       <p className="feu-page-sub">Your classes and what&apos;s due.</p>
+
+      <InvitesPanel invites={invites} />
 
       {classes.length === 0 ? (
         <p className="feu-muted">You are not enrolled in any classes yet.</p>
