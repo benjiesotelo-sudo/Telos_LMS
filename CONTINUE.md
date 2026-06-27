@@ -117,3 +117,5 @@ Large autonomous build. Branch ~45 commits beyond main. Verified: **231 tests gr
 - **Bottom = Grade Editor (editable):** a separate table, rows = students, columns = each assessment, each cell shows **raw score / max points** (e.g. `85 / 100`) and is editable. Editing sets the grade_override (raw, out of `total_points`); it flows up into the top sheet (server `refresh()`). Online auto-graded items show their auto score/possible; manual items show the entered score/total_points.
 - Files: `app/instructor/grades/GradeSheet.tsx` (split into a read-only sheet + a `GradeEditor` component), `app/instructor/grades/page.tsx`. Data already in `getSectionGrades` (`cells` %, `rawOverrides`, `totalPoints` per assessment).
 - **Perf:** `getSectionGrades` does ~5 sequential cloud queries — parallelize with `Promise.all` to speed up the grades page. (Dev-mode + cloud latency is the main slowness; production/Vercel is much faster.)
+
+## ▶▶ FIRST TASK WHEN RESUMING (user directive 2026-06-27): build the **grade editor** (the two-table Grades split described in "NEXT-SESSION feature" above) BEFORE anything else. Then Theme D / hardening.
