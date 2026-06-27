@@ -20,7 +20,8 @@ const tag = `reveal-${Date.now()}`
 
 // Shared instructor + assessment data
 let instructorId: string
-let assessmentId: string
+let assessmentId: string          // type 'quiz'
+let activityAssessmentId: string  // type 'activity' (homework)
 let classId: string
 
 // Students (one per scenario)
@@ -44,6 +45,7 @@ async function seedScenario(opts: {
   revealAnswers: boolean
   closesAt: string | null // past ISO string = closed; future ISO = still open; null = no closes_at
   status: 'graded' | 'submitted' | 'in_progress'
+  assessmentId?: string   // defaults to the shared quiz assessment
 }): Promise<string> {
   const admin = createAdminClient()
 
@@ -51,7 +53,7 @@ async function seedScenario(opts: {
   const { data: asgRow, error: asgErr } = await admin
     .from('assignments')
     .insert({
-      assessment_id: assessmentId,
+      assessment_id: opts.assessmentId ?? assessmentId,
       class_id: classId,
       instructor_id: instructorId,
       reveal_answers: opts.revealAnswers,
@@ -135,6 +137,27 @@ beforeAll(async () => {
     .from('assessment_keys')
     .insert({ assessment_id: assessmentId, answer_key: ANSWER_KEY })
   if (kErr) throw kErr
+
+  // Seed a SECOND assessment of type 'activity' (homework) + key, for the
+  // type-aware reveal tests (homework reveals immediately, no close required).
+  const { data: actRow, error: actErr } = await admin
+    .from('assessments')
+    .insert({
+      instructor_id: instructorId,
+      title: 'Reveal Test Homework',
+      type: 'activity',
+      total_points: 2,
+      questions: QUESTIONS,
+    })
+    .select('id')
+    .single()
+  if (actErr) throw actErr
+  activityAssessmentId = actRow.id
+
+  const { error: ak2Err } = await admin
+    .from('assessment_keys')
+    .insert({ assessment_id: activityAssessmentId, answer_key: ANSWER_KEY })
+  if (ak2Err) throw ak2Err
 })
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -219,5 +242,49 @@ describe('getRevealedAnswers', () => {
     // stuOther (different student) tries to access stuOwner's reveal
     await setTestUser(stuOther.email, PW)
     await expect(getRevealedAnswers({ submissionId })).rejects.toThrow(/forbidden/i)
+  })
+})
+
+// ─── Type-aware reveal: homework reveals immediately; quiz/exam need close ────
+
+describe('getRevealedAnswers — type-aware close gate', () => {
+  it('HOMEWORK (activity): reveals immediately when graded + reveal=true, NO close date', async () => {
+    const submissionId = await seedScenario({
+      studentId: stuOwner.id,
+      revealAnswers: true,
+      closesAt: null,            // no close date
+      status: 'graded',
+      assessmentId: activityAssessmentId,
+    })
+    await setTestUser(stuOwner.email, PW)
+    const result = await getRevealedAnswers({ submissionId })
+    expect(result).not.toBeNull()
+    expect(result!.correctAnswers['q1'].value).toBe('2')
+  })
+
+  it('HOMEWORK (activity): reveals even when close date is in the FUTURE', async () => {
+    const futureClose = new Date(Date.now() + 3_600_000).toISOString()
+    const submissionId = await seedScenario({
+      studentId: stuOwner.id,
+      revealAnswers: true,
+      closesAt: futureClose,
+      status: 'graded',
+      assessmentId: activityAssessmentId,
+    })
+    await setTestUser(stuOwner.email, PW)
+    const result = await getRevealedAnswers({ submissionId })
+    expect(result).not.toBeNull()
+  })
+
+  it('QUIZ: returns null when graded + reveal=true but NO close date set', async () => {
+    const submissionId = await seedScenario({
+      studentId: stuOwner.id,
+      revealAnswers: true,
+      closesAt: null,            // quiz with no close → never reveals
+      status: 'graded',
+    })
+    await setTestUser(stuOwner.email, PW)
+    const result = await getRevealedAnswers({ submissionId })
+    expect(result).toBeNull()
   })
 })

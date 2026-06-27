@@ -18,11 +18,13 @@ export interface RevealedAnswersResult {
  *   - The submission MUST belong to the caller — another student requesting a
  *     foreign submission receives a 'Forbidden' error (thrown before any key
  *     data is touched).
- *   - The answer key is returned ONLY when ALL three gates pass:
- *       1. assignment.reveal_answers === true
- *       2. assignment.closes_at is set AND in the past (assessment is closed)
- *       3. submission.status === 'graded'
- *   - When ANY gate fails the function returns null — the key is never read.
+ *   - The answer key is returned ONLY when the reveal gate passes:
+ *       1. assignment.reveal_answers === true        (instructor toggle)
+ *       2. submission.status === 'graded'
+ *       3. TYPE-AWARE close gate:
+ *            • homework / activity → reveals immediately (no close required)
+ *            • quiz / exam         → only after closes_at is set AND in the past
+ *   - When the gate fails the function returns null — the key is never read.
  *   - The answer key is read EXCLUSIVELY via the service-role admin client
  *     (assessment_keys has zero public RLS policies).
  */
@@ -56,19 +58,27 @@ export async function getRevealedAnswers(input: {
   // ── 4. Load the assignment ────────────────────────────────────────────────
   const { data: assignment, error: asgErr } = await admin
     .from('assignments')
-    .select('assessment_id, reveal_answers, closes_at')
+    .select('assessment_id, reveal_answers, closes_at, assessment:assessment_id(type)')
     .eq('id', submission.assignment_id)
     .single()
 
   if (asgErr || !assignment) throw new Error('Assignment not found')
 
-  // ── 5. Gate — return null (no reveal) unless ALL conditions pass ──────────
+  // ── 5. Gate — type-aware reveal ───────────────────────────────────────────
+  // Homework (activity) reveals as soon as it's graded; quizzes & exams reveal
+  // only after their close date passes (so students can't share answers while
+  // others are still taking it). The instructor toggle gates everything.
+  const assessmentType = ((assignment as any).assessment?.type ?? 'quiz') as
+    | 'activity'
+    | 'quiz'
+    | 'exam'
   const revealEnabled = assignment.reveal_answers === true
+  const isGraded = submission.status === 'graded'
   const isClosed =
     assignment.closes_at != null && new Date(assignment.closes_at) <= new Date()
-  const isGraded = submission.status === 'graded'
+  const closeSatisfied = assessmentType === 'activity' ? true : isClosed
 
-  if (!revealEnabled || !isClosed || !isGraded) {
+  if (!revealEnabled || !isGraded || !closeSatisfied) {
     return null
   }
 
