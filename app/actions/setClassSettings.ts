@@ -1,15 +1,7 @@
 'use server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { refresh } from 'next/cache'
-
-export const CLASS_PERIODS = [
-  '1st Semester',
-  '2nd Semester',
-  'Midyear',
-  'Special Course',
-] as const
-
-export type ClassPeriod = (typeof CLASS_PERIODS)[number]
+import { CLASS_PERIODS } from '@/lib/periods'
 
 export interface SetClassSettingsInput {
   classId: string

@@ -1,6 +1,7 @@
 'use client'
 import { useState, useTransition } from 'react'
-import { setClassSettings, CLASS_PERIODS } from '@/app/actions/setClassSettings'
+import { setClassSettings } from '@/app/actions/setClassSettings'
+import { CLASS_PERIODS } from '@/lib/periods'
 
 interface ClassSettingsFormProps {
   classId: string
