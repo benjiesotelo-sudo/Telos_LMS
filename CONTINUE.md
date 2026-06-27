@@ -131,3 +131,20 @@ Note: the user's earlier (unscoped) "Clean Test Data" query did NOT remove these
 
 ### Resolved 2026-06-28: Mamoun's quiz showed 311% — fixed (data, not code)
 Cause: a leftover grade_override (score=93.33) created under the pre-M3 "%-as-override" meaning; M3's new raw/total_points math read it as 93.33÷30×100=311%. The override is now deleted, so Mamoun shows his correct auto-grade (28/30 = 93.33%). FOLLOW-UPS for the grade-editor task: (1) clearing a grade cell should DELETE the override (revert to auto) — there's currently no UI to undo an override; (2) the M3 semantic change can mis-read any override stored before it — sweep for others (likely none left).
+
+## ★ GRADE EDITOR — FINAL CHOSEN DESIGN (2026-06-28) — supersedes the earlier "two-table" note
+User picked **Option 1: per-assessment entry** (read-only computed sheet + a focused one-assessment editor). Build this.
+
+**Layout** (`app/instructor/grades/`):
+- **Top — read-only FEU sheet:** the existing computed table (category %s → MG/FG → Course MARK + LG). **Strip ALL inline editing from it** — it becomes the submit-report only.
+- **Bottom — per-assessment editor:** a control to choose ONE assessment (a dropdown, AND/OR clicking that assessment's column header in the top sheet selects it). Then a list of enrolled students, each row: `[ score ] / {total_points}`, plus for online items the **auto** value (e.g. "auto 28") and a per-row **↺ revert**. One **Save** button for the whole column (batch).
+
+**Behavior decisions (baked in):**
+1. Each input prefills with the student's **current effective score** = override.score if present, else the auto raw score (online submission's earned), else blank (manual, ungraded).
+2. **Save** writes only CHANGED rows. Create/update an override **only when the entered value ≠ the auto value** (avoids re-creating redundant overrides — this is what caused Mamoun's stale 311% override).
+3. **↺ revert** = DELETE that student's grade_override for this assessment → cell falls back to the auto-grade. (New action `deleteGradeOverride({studentId, assessmentId, classId})`, owner/admin-guarded, then `refresh()`.) This is the missing "undo" follow-up — fold it into this build.
+4. Score is RAW out of `total_points` (unchanged M3 semantics → %). Manual items have no auto, so blank until entered.
+5. Batch entry: consider `setGradeOverrides([...])` (one action, many rows) or loop `setGradeOverride`; either is fine — keep pending/disabled state on Save (no frozen screen).
+6. **Perf:** parallelize `getSectionGrades`'s ~5 sequential cloud queries with `Promise.all` as part of this task (the grades page is the slow one).
+
+Data already available from `getSectionGrades`: per-assessment `totalPoints`, per-student `cells` (%) + `rawOverrides` (raw). Add the per-student **auto raw** value (submission.earned) to the payload so the editor can show "auto N" and decide ≠-auto.
