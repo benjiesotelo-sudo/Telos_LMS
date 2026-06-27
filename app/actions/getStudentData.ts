@@ -59,7 +59,7 @@ async function loadStudentClassData(studentId: string, onlyClassId?: string) {
   const { data: enrollments, error: enrollErr } = await enrollQ
   if (enrollErr) throw new Error(`Failed to load enrollments: ${enrollErr.message}`)
   const classIds = (enrollments ?? []).map((e: any) => e.class_id as string)
-  if (classIds.length === 0) return { classes: [] as RawClass[], assignments: [], subMap: new Map(), overrideMap: new Map() }
+  if (classIds.length === 0) return { classes: [] as RawClass[], assignments: [] as any[], subMap: new Map<string, any>(), overrideMap: new Map<string, number>() }
 
   // 2. Classes, 3. assignments — concurrent
   const [{ data: classes, error: clsErr }, { data: assignments, error: asgErr }] = await Promise.all([
@@ -103,7 +103,7 @@ async function loadStudentClassData(studentId: string, onlyClassId?: string) {
     overrideMap.set(`${o.class_id}:${o.assessment_id}`, Number(o.score))
   }
 
-  return { classes: (classes ?? []) as unknown as RawClass[], assignments: assignments ?? [], subMap, overrideMap }
+  return { classes: (classes ?? []) as unknown as RawClass[], assignments: (assignments ?? []) as any[], subMap, overrideMap }
 }
 
 function buildTask(a: any, subMap: Map<string, any>, overrideMap: Map<string, number>, classId: string): StudentTask {
