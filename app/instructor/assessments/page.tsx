@@ -89,7 +89,10 @@ export default async function AssessmentsPage() {
       <ImportPanel />
       <ManualAssessmentPanel />
       {classes.length > 0 ? (
-        <AssignPanel classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))} />
+        <AssignPanel
+          classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))}
+          assessments={(assessments ?? []).map((a) => ({ id: a.id, title: a.title, type: a.type }))}
+        />
       ) : (
         <div className="feu-card">
           <p className="feu-muted">Create a course + class to assign assessments.</p>
