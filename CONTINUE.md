@@ -89,3 +89,25 @@ Build order: **B (classes+roster) → A (profiles/roles) → C (instructor) → 
 
 ## To continue
 `cd ~/Documents/Telos_LMS`, start a Claude session here, say "continue the Telos_LMS build."
+
+## 2026-06-27 — Slice 2 build on branch `feat/theme-n-app-shell` (verified; cloud migrated to 0010; NOT merged to main)
+Large autonomous build. Branch ~45 commits beyond main. Verified: **231 tests green, build clean, headless e2e 12/12**. Cloud DB migrated through **0010** (all additive). **Production (main) still = Theme B era** until merged.
+
+### Built on the branch (each task two-stage reviewed + tested)
+- **Theme N — App Shell:** left-sidebar nav (instructor + student), routed pages, enroll-link management (list active / reuse / revoke / live countdown), no-refresh via server-side `refresh()` from `next/cache`.
+- **Theme A — Identity:** structured names (prefix/first/MI/last/suffix → auto `full_name`); registration collects them; profile view/edit; **change-password** (`/account/password`) + **reset-recovery** (`/reset-password`) pages + login "Forgot password"; **super-admin (`admin`) account management** (`/instructor/users`: CRUD users + reset password; last-admin/self-demotion lockout guard). Seed makes Benjie super-admin `Benjamin C. Sotelo`; Mamoun cloud-update documented.
+- **Theme C — Course hub + FEU gradebook:** two-level **Courses & Classes** (course → sections → class detail); class detail (contents + enrolled students + editable **period/section** + **weights**); per-assignment **period(Midterm/Final)/active/reveal** toggles + deadlines; **FEU grade sheet by section** (model: `docs/superpowers/specs/2026-06-26-feu-gradebook-model.md`); **manual score override = raw score / total_points → %** (bonus may exceed 100); instructor **preview + view answers** (key stays server-side); **student answer reveal** only when enabled+closed+graded.
+- **Manual assessments:** `is_manual` assessments (name+type+points, NOT takeable online); created on Assessments page (block under Import); assigned via an **assessment dropdown** (pick by name, no IDs); graded in the sheet (raw score).
+- **e2e harness:** `e2e/seed.mjs` + `e2e/smoke.mjs` (Playwright). To run: `supabase db reset` → `node e2e/seed.mjs` → start a LOCAL-pointed dev server on :3100 (inline NEXT_PUBLIC_SUPABASE_URL=http://127.0.0.1:54321 + local anon/service keys + PORT=3100) → `node e2e/smoke.mjs`. Logs in as `e2e-admin@local.test` / `E2e_admin_pass123!`, loads every page, flags loops/console/page errors/stuck-loading.
+
+### Migrations (cloud now at 0010): 0006 name fields · 0007 trigger copies names · 0008 assignment period/active/reveal + class weights · 0009 grade_overrides · 0010 is_manual.
+
+### LEFT TO DO
+1. **Merge branch → `main`** to ship everything to production (cloud already migrated to 0010). Pattern: `git checkout main && git merge feat/theme-n-app-shell`, run `npm test` on merged main, `git push origin main` (Vercel auto-deploys), delete branch.
+2. **User's final check** pending: assign a manual assessment (dropdown) + enter a raw grade in the sheet.
+3. **Theme D** (student experience: real dashboards, view classes/details, pre-quiz screen, live quiz timer + auto-submit) — NOT started.
+4. **Theme E / deferred follow-ups:** `handle_new_user` trigger still trusts metadata `role` → ensure cloud signups OFF or force role=student; section-picker for unplaced general-link registrants at approval; `student_number` DB unique index; schedule `purge_expired_pending()` via pg_cron; `middleware`→`proxy` rename; misc review minors logged in `.superpowers/sdd/progress.md`.
+
+### DEV-MODE GOTCHA (not a bug): long-running `next dev` + an open tab loops repeated GETs after many hot-reloads (esp. while files are being edited). e2e on a fresh browser = 0 loops; production (built app) unaffected. Fix: restart `npm run dev` + hard-reload (Cmd+Shift+R).
+
+### AGENTS.md rules added this session: (1) no frozen-looking screens (loading.tsx + pending buttons); (2) `'use server'` files may export ONLY async actions — never a const/array (a client import of such a const crashes at runtime while the build still passes).
