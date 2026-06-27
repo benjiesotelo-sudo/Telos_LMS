@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getClassDetail } from '@/app/actions/getClassDetail'
+import { getClassRemovalRequests } from '@/app/actions/removalRequests'
+import { RemoveStudent } from './RemoveStudent'
 import { AssignmentMetaControls } from '@/app/instructor/AssignmentMetaControls'
 import { ClassWeightsForm } from '@/app/instructor/ClassWeightsForm'
 import { ClassSettingsForm } from '@/app/instructor/ClassSettingsForm'
@@ -40,6 +42,10 @@ export default async function ClassDetailPage({
   }
 
   const { class: cls, assessments, students } = detail
+
+  // Pending removal requests for this class → student ids (so the roster shows status).
+  const removalReqs = await getClassRemovalRequests({ classId: cls.id })
+  const pendingRemoval = new Set(removalReqs.filter((r) => r.status === 'pending').map((r) => r.studentId))
 
   const typeLabel: Record<string, string> = {
     quiz: 'Quiz',
@@ -150,6 +156,7 @@ export default async function ClassDetailPage({
                 <th style={thStyle}>Student #</th>
                 <th style={thStyle}>Email</th>
                 <th style={thStyle}>Status</th>
+                <th style={thStyle}>Manage</th>
               </tr>
             </thead>
             <tbody>
@@ -170,6 +177,14 @@ export default async function ClassDetailPage({
                     >
                       {stu.status}
                     </span>
+                  </td>
+                  <td style={tdStyle}>
+                    <RemoveStudent
+                      classId={cls.id}
+                      studentId={stu.studentId}
+                      studentName={stu.fullName || stu.email}
+                      pending={pendingRemoval.has(stu.studentId)}
+                    />
                   </td>
                 </tr>
               ))}
