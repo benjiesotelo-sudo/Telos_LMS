@@ -61,9 +61,6 @@ function EditorGrid({
   }))
 
   const [edits, setEdits] = useState<Record<string, string>>({})
-  const [editingKey, setEditingKey] = useState<string | null>(null)
-  // The staged value (or undefined) at the moment a cell was opened — used to undo on Esc.
-  const [editOrigin, setEditOrigin] = useState<string | undefined>(undefined)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
@@ -76,7 +73,7 @@ function EditorGrid({
     if (auto !== undefined) return String(auto)
     return ''
   }
-  function displayRaw(stu: SectionStudentRow, a: SectionAssessmentMeta): string {
+  function valueOf(stu: SectionStudentRow, a: SectionAssessmentMeta): string {
     const key = k(stu.studentId, a.assessmentId)
     return edits[key] !== undefined ? edits[key] : savedRaw(stu, a)
   }
@@ -135,22 +132,8 @@ function EditorGrid({
     entries = []
   }
 
-  function openCell(key: string) {
-    if (saving) return
-    setEditOrigin(edits[key])
-    setEditingKey(key)
-  }
   function setVal(key: string, v: string) {
     setEdits((p) => ({ ...p, [key]: v }))
-  }
-  function cancelEsc(key: string) {
-    setEdits((p) => {
-      const next = { ...p }
-      if (editOrigin === undefined) delete next[key]
-      else next[key] = editOrigin
-      return next
-    })
-    setEditingKey(null)
   }
 
   async function handleSave() {
@@ -184,88 +167,64 @@ function EditorGrid({
 
   const markCell = (v: number | null) => (v !== null ? `${v.toFixed(2)}%` : '—')
 
-  // Cell as a render FUNCTION (not a <Component/>) so the focused input keeps its
-  // identity across re-renders (no remount / lost focus while typing).
+  // Every assessment cell is ALWAYS an input (no click-to-edit). Rendered via a
+  // function (not a child component) so inputs keep focus across re-renders; Tab
+  // moves between them for free.
   function cell(stu: SectionStudentRow, a: SectionAssessmentMeta) {
     const key = k(stu.studentId, a.assessmentId)
-    const isEditing = editingKey === key
     const isDirty = dirty.has(key)
     const pct = previewPct(stu, a)
     const hasOverride = stu.rawOverrides[a.assessmentId] !== undefined
     const auto = stu.autoRaw[a.assessmentId]
-    const display = displayRaw(stu, a)
-
-    if (isEditing) {
-      return (
-        <td key={a.id} style={{ ...tdStyle, background: EDIT_TINT, outline: `2px solid ${EDIT_OUTLINE}`, outlineOffset: -2 }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-              <input
-                autoFocus
-                type="number"
-                min={0}
-                step={0.1}
-                value={edits[key] ?? savedRaw(stu, a)}
-                onChange={(e) => setVal(key, e.target.value)}
-                onBlur={() => setEditingKey(null)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    e.preventDefault()
-                    setEditingKey(null)
-                  }
-                  if (e.key === 'Escape') cancelEsc(key)
-                }}
-                style={{ width: 52, padding: '2px 4px', fontSize: 12, border: `1.5px solid ${EDIT_OUTLINE}`, borderRadius: 3, textAlign: 'right' }}
-              />
-              <span style={{ fontSize: 11, color: 'var(--gray)' }}>/ {a.totalPoints}</span>
-            </div>
-            {hasOverride &&
-              (auto !== undefined ? (
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    setVal(key, String(auto))
-                    setEditingKey(null)
-                  }}
-                  style={revertBtn}
-                >
-                  ↺ auto {fmt(auto)}
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  onMouseDown={(e) => {
-                    e.preventDefault()
-                    setVal(key, '')
-                    setEditingKey(null)
-                  }}
-                  style={{ ...revertBtn, color: '#c0392b', borderColor: '#c0392b' }}
-                >
-                  Clear
-                </button>
-              ))}
-          </div>
-        </td>
-      )
-    }
-
-    const tint = isDirty ? EDIT_TINT : hasOverride ? MANUAL_TINT : undefined
-    const outline = isDirty ? `2px solid ${EDIT_OUTLINE}` : undefined
+    const borderColor = isDirty ? EDIT_OUTLINE : hasOverride ? 'var(--gold-dk)' : 'var(--border)'
+    const bg = isDirty ? EDIT_TINT : hasOverride ? MANUAL_TINT : undefined
     return (
-      <td
-        key={a.id}
-        style={{ ...tdStyle, cursor: 'pointer', userSelect: 'none', background: tint, outline, outlineOffset: -2 }}
-        title={`Click to enter raw score out of ${a.totalPoints}`}
-        onClick={() => openCell(key)}
-      >
-        {hasOverride && !isDirty && <span style={{ color: 'var(--gold-dk)', marginRight: 3 }}>•</span>}
-        {display === '' ? (
-          <span style={{ color: 'var(--gray)' }}>—</span>
-        ) : (
-          <span style={{ color: pct !== null ? scoreColor(pct) : 'var(--ink)', fontWeight: 500 }}>{display}</span>
-        )}
-        <span style={{ color: 'var(--gray)', fontSize: 10 }}> / {a.totalPoints}</span>
+      <td key={a.id} style={{ ...tdStyle, background: bg, textAlign: 'center' }}>
+        <div style={{ display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+          <input
+            type="number"
+            min={0}
+            step={0.1}
+            value={valueOf(stu, a)}
+            disabled={saving}
+            title={auto !== undefined ? `Auto-grade: ${fmt(auto)} / ${a.totalPoints}` : 'Manual item (no auto-grade)'}
+            onChange={(e) => setVal(key, e.target.value)}
+            style={{
+              width: 50,
+              padding: '3px 5px',
+              fontSize: 12,
+              border: `1.5px solid ${borderColor}`,
+              borderRadius: 3,
+              textAlign: 'right',
+              color: pct !== null ? scoreColor(pct) : 'var(--ink)',
+              fontWeight: 500,
+              background: '#fff',
+            }}
+          />
+          <span style={{ fontSize: 10, color: 'var(--gray)' }}>/{a.totalPoints}</span>
+          {hasOverride &&
+            (auto !== undefined ? (
+              <button
+                type="button"
+                disabled={saving}
+                title={`Revert to auto-grade (${fmt(auto)})`}
+                onClick={() => setVal(key, String(auto))}
+                style={iconBtn}
+              >
+                ↺
+              </button>
+            ) : (
+              <button
+                type="button"
+                disabled={saving}
+                title="Clear this grade"
+                onClick={() => setVal(key, '')}
+                style={{ ...iconBtn, color: '#c0392b', borderColor: '#c0392b' }}
+              >
+                ✕
+              </button>
+            ))}
+        </div>
       </td>
     )
   }
@@ -280,7 +239,7 @@ function EditorGrid({
     <th
       key={a.id}
       title={a.title}
-      style={{ ...thBase, background: typeBg(a.type), maxWidth: 110, overflow: 'hidden', textOverflow: 'ellipsis', borderLeft: isFirst ? '2px solid var(--green)' : undefined }}
+      style={{ ...thBase, background: typeBg(a.type), maxWidth: 130, overflow: 'hidden', textOverflow: 'ellipsis', borderLeft: isFirst ? '2px solid var(--green)' : undefined }}
     >
       <span style={{ color: 'var(--gray)', marginRight: 2 }}>[{typeTag(a.type)}]</span>
       {a.title}
@@ -292,7 +251,7 @@ function EditorGrid({
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12, marginBottom: 10 }}>
         <h2 style={{ fontSize: 16, color: 'var(--green)', margin: 0 }}>Grade Editor</h2>
         <span style={{ fontSize: 12, color: 'var(--gray)' }}>
-          click a cell to enter a raw score; MG / FG / Mark preview live
+          type a raw score in any cell (Tab moves across); MG / FG / Mark preview live · ↺ reverts to auto · ✕ clears a manual grade
         </span>
       </div>
 
@@ -400,7 +359,6 @@ function EditorGrid({
                 type="button"
                 onClick={() => {
                   setEdits({})
-                  setEditingKey(null)
                   setError(null)
                   setMsg(null)
                 }}
@@ -439,14 +397,14 @@ const groupTh: React.CSSProperties = {
   color: '#3c5a48',
   borderBottom: '1px solid var(--border)',
 }
-const tdStyle: React.CSSProperties = { padding: '7px 10px', color: 'var(--ink)', textAlign: 'right' }
-const revertBtn: React.CSSProperties = {
-  padding: '1px 6px',
-  fontSize: 10,
+const tdStyle: React.CSSProperties = { padding: '6px 8px', color: 'var(--ink)', textAlign: 'right' }
+const iconBtn: React.CSSProperties = {
+  padding: '1px 5px',
+  fontSize: 11,
+  lineHeight: 1.3,
   background: '#fff',
   color: 'var(--gold-dk)',
   border: '1px solid var(--gold-dk)',
   borderRadius: 3,
   cursor: 'pointer',
-  whiteSpace: 'nowrap',
 }
