@@ -25,18 +25,23 @@ let instructorId: string
 let studentAId: string
 let studentBId: string
 let assessmentId: string
+let assessment2Id: string
 let classId: string
 
-async function readOverride(studentId: string) {
+async function readOverrideFor(studentId: string, aId: string) {
   const admin = (await import('@/lib/supabase/server')).createAdminClient()
   const { data, error } = await admin
     .from('grade_overrides')
     .select('score')
     .eq('student_id', studentId)
-    .eq('assessment_id', assessmentId)
+    .eq('assessment_id', aId)
     .eq('class_id', classId)
   if (error) throw error
   return data
+}
+
+async function readOverride(studentId: string) {
+  return readOverrideFor(studentId, assessmentId)
 }
 
 beforeAll(async () => {
@@ -77,6 +82,9 @@ beforeAll(async () => {
   const imported = await importAssessment(quiz1)
   assessmentId = imported.assessmentId
 
+  const imported2 = await importAssessment({ ...quiz1, title: 'GE Quiz 2' })
+  assessment2Id = imported2.assessmentId
+
   const course = await seedCourse({ instructorId, code: 'GE101', title: 'GE Course' })
   const cls = await seedClass({ instructorId, courseId: course.id, period: '1st Semester' })
   classId = cls.id
@@ -114,55 +122,50 @@ describe('deleteGradeOverride', () => {
   })
 })
 
-describe('setGradeOverrides (batch column save)', () => {
-  it('upserts scored rows and deletes null (revert) rows in one call', async () => {
+describe('setGradeOverrides (batch save across assessments)', () => {
+  it('upserts and reverts across two assessments in one call', async () => {
     await setTestUser(INSTR_EMAIL, PASSWORD)
-    // Seed an override for B so the null entry has something to delete.
-    await setGradeOverride({ studentId: studentBId, assessmentId, classId, score: 60 })
+    // Seed an override on assessment2 for B so the null entry deletes something.
+    await setGradeOverride({ studentId: studentBId, assessmentId: assessment2Id, classId, score: 60 })
 
     const res = await setGradeOverrides({
       classId,
-      assessmentId,
       entries: [
-        { studentId: studentAId, score: 77 },   // upsert
-        { studentId: studentBId, score: null },  // revert (delete)
+        { studentId: studentAId, assessmentId,             score: 77 },   // upsert
+        { studentId: studentAId, assessmentId: assessment2Id, score: 42 }, // upsert (other assessment)
+        { studentId: studentBId, assessmentId: assessment2Id, score: null }, // delete
       ],
     })
     expect(res.ok).toBe(true)
-    expect(res.upserted).toBe(1)
+    expect(res.upserted).toBe(2)
     expect(res.deleted).toBe(1)
 
-    const a = await readOverride(studentAId)
-    expect(a).toHaveLength(1)
-    expect(Number(a![0].score)).toBe(77)
+    const a1 = await readOverrideFor(studentAId, assessmentId)
+    expect(a1).toHaveLength(1)
+    expect(Number(a1![0].score)).toBe(77)
 
-    expect(await readOverride(studentBId)).toHaveLength(0)
+    const a2 = await readOverrideFor(studentAId, assessment2Id)
+    expect(Number(a2![0].score)).toBe(42)
+
+    expect(await readOverrideFor(studentBId, assessment2Id)).toHaveLength(0)
   })
 
   it('an empty entries array is a no-op', async () => {
     await setTestUser(INSTR_EMAIL, PASSWORD)
-    const res = await setGradeOverrides({ classId, assessmentId, entries: [] })
+    const res = await setGradeOverrides({ classId, entries: [] })
     expect(res).toEqual({ ok: true, upserted: 0, deleted: 0 })
   })
 
   it('a non-owner instructor is rejected', async () => {
     await setTestUser(INSTR2_EMAIL, PASSWORD)
     await expect(
-      setGradeOverrides({
-        classId,
-        assessmentId,
-        entries: [{ studentId: studentAId, score: 10 }],
-      }),
+      setGradeOverrides({ classId, entries: [{ studentId: studentAId, assessmentId, score: 10 }] }),
     ).rejects.toThrow()
   })
 
   it('a bonus score > 100 is stored unclamped', async () => {
     await setTestUser(INSTR_EMAIL, PASSWORD)
-    await setGradeOverrides({
-      classId,
-      assessmentId,
-      entries: [{ studentId: studentBId, score: 108 }],
-    })
+    await setGradeOverrides({ classId, entries: [{ studentId: studentBId, assessmentId, score: 108 }] })
     const b = await readOverride(studentBId)
     expect(Number(b![0].score)).toBe(108)
   })
