@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { listClasses } from '@/app/actions/listClasses'
 import { ImportPanel } from '@/app/instructor/ImportPanel'
+import { ManualAssessmentPanel } from '@/app/instructor/ManualAssessmentPanel'
 import { AssignPanel } from '@/app/instructor/AssignPanel'
 
 const typeLabel: Record<string, string> = {
@@ -86,6 +87,7 @@ export default async function AssessmentsPage() {
       )}
 
       <ImportPanel />
+      <ManualAssessmentPanel />
       {classes.length > 0 ? (
         <AssignPanel classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))} />
       ) : (
