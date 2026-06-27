@@ -35,10 +35,19 @@ function assessmentOrder(a: SectionAssessmentMeta): number {
 // ── OverrideCell ─────────────────────────────────────────────────────────────
 
 interface OverrideCellProps {
+  /** Computed cell percentage (displayed value). */
   value: number | null
   studentId: string
   assessmentId: string
   classId: string
+  /** Assessment's total_points — shown as "/ {totalPoints}" hint in edit mode. */
+  totalPoints: number
+  /**
+   * The raw override score already stored for this cell (from rawOverrides).
+   * Used to prefill the edit input so the instructor sees what they entered last.
+   * Undefined when no override exists (cell is from an auto-graded submission or empty).
+   */
+  rawScore: number | undefined
 }
 
 function OverrideCell({
@@ -46,6 +55,8 @@ function OverrideCell({
   studentId,
   assessmentId,
   classId,
+  totalPoints,
+  rawScore,
 }: OverrideCellProps) {
   const [editing, setEditing] = useState(false)
   const [inputVal, setInputVal] = useState('')
@@ -64,6 +75,8 @@ function OverrideCell({
     }
     setSaving(true)
     try {
+      // Score is stored as the raw value (e.g. 85 on a 100-pt item).
+      // getSectionGrades converts it to % via: raw / total_points * 100.
       // setGradeOverride calls server-side refresh() (next/cache), which
       // re-renders this page with the recomputed marks — no client refresh needed.
       await setGradeOverride({ studentId, assessmentId, classId, score: num })
@@ -86,36 +99,42 @@ function OverrideCell({
   if (editing) {
     return (
       <td style={tdStyle}>
-        <input
-          autoFocus
-          type="number"
-          min={0}
-          step={0.1}
-          value={inputVal}
-          onChange={(e) => setInputVal(e.target.value)}
-          onBlur={handleSave}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') {
-              e.preventDefault()
-              handleSave()
-            }
-            if (e.key === 'Escape') {
-              // Clear first so the blur-triggered handleSave early-returns
-              // on empty input (Escape must cancel, not persist).
-              setInputVal('')
-              setEditing(false)
-            }
-          }}
-          style={{
-            width: 58,
-            padding: '2px 4px',
-            fontSize: 12,
-            border: '1.5px solid var(--green)',
-            borderRadius: 3,
-            outline: 'none',
-            textAlign: 'right',
-          }}
-        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <input
+            autoFocus
+            type="number"
+            min={0}
+            step={0.1}
+            value={inputVal}
+            title={`Enter raw score out of ${totalPoints}`}
+            onChange={(e) => setInputVal(e.target.value)}
+            onBlur={handleSave}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                e.preventDefault()
+                handleSave()
+              }
+              if (e.key === 'Escape') {
+                // Clear first so the blur-triggered handleSave early-returns
+                // on empty input (Escape must cancel, not persist).
+                setInputVal('')
+                setEditing(false)
+              }
+            }}
+            style={{
+              width: 48,
+              padding: '2px 4px',
+              fontSize: 12,
+              border: '1.5px solid var(--green)',
+              borderRadius: 3,
+              outline: 'none',
+              textAlign: 'right',
+            }}
+          />
+          <span style={{ fontSize: 11, color: 'var(--gray)', whiteSpace: 'nowrap' }}>
+            / {totalPoints}
+          </span>
+        </div>
       </td>
     )
   }
@@ -123,9 +142,11 @@ function OverrideCell({
   return (
     <td
       style={{ ...tdStyle, cursor: 'pointer', userSelect: 'none' }}
-      title="Click to enter manual override (%)"
+      title={`Click to enter raw score out of ${totalPoints} (system computes %)`}
       onClick={() => {
-        setInputVal(value !== null ? value.toFixed(2) : '')
+        // Prefill with the previously-entered raw score if an override exists;
+        // otherwise leave blank so the instructor enters a fresh value.
+        setInputVal(rawScore !== undefined ? String(rawScore) : '')
         setEditing(true)
       }}
     >
@@ -199,7 +220,7 @@ export function GradeSheet({ grades, classId }: Props) {
           [E]&nbsp;=&nbsp;Exam
         </span>
         <span style={{ color: 'var(--gray)' }}>
-          Click any score cell to enter a manual override.
+          Click any score cell to enter a raw score out of the item&apos;s points — the system computes the %.
         </span>
       </div>
 
@@ -400,6 +421,8 @@ export function GradeSheet({ grades, classId }: Props) {
                         studentId={stu.studentId}
                         assessmentId={a.assessmentId}
                         classId={classId}
+                        totalPoints={a.totalPoints}
+                        rawScore={stu.rawOverrides[a.assessmentId]}
                       />
                     ))}
 
@@ -428,6 +451,8 @@ export function GradeSheet({ grades, classId }: Props) {
                         studentId={stu.studentId}
                         assessmentId={a.assessmentId}
                         classId={classId}
+                        totalPoints={a.totalPoints}
+                        rawScore={stu.rawOverrides[a.assessmentId]}
                       />
                     ))}
 

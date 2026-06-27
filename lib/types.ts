@@ -118,14 +118,26 @@ export interface SectionAssessmentMeta {
   title: string
   type: 'activity' | 'quiz' | 'exam'
   period: 'midterm' | 'final'
+  /**
+   * The assessment's maximum raw score (assessments.total_points).
+   * Used to convert a raw override into a cell percentage:
+   *   cell% = rawScore / totalPoints * 100
+   * Also surfaced in the GradeSheet input hint ("/ {totalPoints}").
+   */
+  totalPoints: number
 }
 
 /**
  * One student row in the section gradebook.
  *
- * cells: keyed by assessmentId.  Value = manual override score if one exists,
- * else (earned / possible * 100) from the auto-graded submission (possible > 0),
- * else null (no data).
+ * cells: keyed by assessmentId.  Value is a PERCENTAGE (0–100+):
+ *   - If an override exists: rawScore / totalPoints * 100  (may exceed 100 for bonus).
+ *   - Else if an auto-graded submission exists (possible > 0): earned / possible * 100.
+ *   - Else: null (no data).
+ *
+ * rawOverrides: keyed by assessmentId.  Present ONLY for cells that have a
+ * grade_override row.  The stored raw score (not the converted %) — used to
+ * prefill the GradeSheet edit input with the previously-entered raw value.
  *
  * Note: if the same assessment is deployed more than once in the same class the
  * last deployment wins in the cells map (unsupported edge-case; don't do it).
@@ -136,6 +148,12 @@ export interface SectionStudentRow {
   studentNumber: string | null
   /** Cell percentage for each assessment; null = no submission and no override. */
   cells: Record<string, number | null>
+  /**
+   * Raw override scores (the value stored in grade_overrides.score) for each
+   * assessment that has an override.  Empty object when no overrides exist.
+   * Used to prefill the override input with the last-entered raw score.
+   */
+  rawOverrides: Record<string, number>
   midtermMark: number | null
   finalMark:   number | null
   courseMark:  number | null

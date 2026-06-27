@@ -68,7 +68,7 @@ export async function getSectionGrades(input: {
   // ── 3. Class assignments + assessment metadata ──────────────────────────
   const { data: assignments, error: assignErr } = await admin
     .from('assignments')
-    .select('id, assessment_id, period, assessment:assessment_id(title, type)')
+    .select('id, assessment_id, period, assessment:assessment_id(title, type, total_points)')
     .eq('class_id', input.classId)
   if (assignErr) throw new Error(`Failed to load assignments: ${assignErr.message}`)
 
@@ -78,6 +78,7 @@ export async function getSectionGrades(input: {
     title:        (a.assessment?.title ?? '') as string,
     type:         (a.assessment?.type  ?? 'quiz') as 'activity' | 'quiz' | 'exam',
     period:       a.period as 'midterm' | 'final',
+    totalPoints:  Number(a.assessment?.total_points ?? 0),
   }))
 
   // Early return when there are no students or no assignments.
@@ -87,12 +88,13 @@ export async function getSectionGrades(input: {
       assessments: assessmentMetas,
       students: students.map((s) => ({
         ...s,
-        cells:       {},
-        midtermMark: null,
-        finalMark:   null,
-        courseMark:  null,
-        letter:      null,
-        qp:          null,
+        cells:        {},
+        rawOverrides: {},
+        midtermMark:  null,
+        finalMark:    null,
+        courseMark:   null,
+        letter:       null,
+        qp:           null,
       })),
     }
   }
@@ -133,20 +135,27 @@ export async function getSectionGrades(input: {
 
   // ── 6. Compute per-student cells + grades ───────────────────────────────
   const studentRows: SectionStudentRow[] = students.map((stu) => {
-    // --- cells ---
-    const cells: Record<string, number | null> = {}
+    // --- cells + rawOverrides ---
+    const cells:        Record<string, number | null> = {}
+    const rawOverrides: Record<string, number>        = {}
 
     for (const asmt of assessmentMetas) {
       const overrideKey   = `${stu.studentId}:${asmt.assessmentId}`
       const submissionKey = `${asmt.id}:${stu.studentId}`
 
       if (overrideMap.has(overrideKey)) {
-        // Manual override takes priority (may exceed 100 for bonus).
-        cells[asmt.assessmentId] = overrideMap.get(overrideKey)!
+        const rawScore = overrideMap.get(overrideKey)!
+        // Store raw score so the GradeSheet can prefill the edit input.
+        rawOverrides[asmt.assessmentId] = rawScore
+        // Convert raw score → percentage using the assessment's total_points.
+        // Guard: if total_points is somehow 0 (NOT NULL in schema, but defensive),
+        // treat the cell as null to avoid division-by-zero.
+        const tp = asmt.totalPoints
+        cells[asmt.assessmentId] = tp > 0 ? (rawScore / tp) * 100 : null
       } else {
         const sub = subMap.get(submissionKey)
         if (sub && sub.possible > 0) {
-          // Auto-graded submission percentage.
+          // Auto-graded submission percentage (unchanged).
           cells[asmt.assessmentId] = (sub.earned / sub.possible) * 100
         } else {
           // No submission (or ungraded with possible=0).
@@ -201,6 +210,7 @@ export async function getSectionGrades(input: {
       fullName:      stu.fullName,
       studentNumber: stu.studentNumber,
       cells,
+      rawOverrides,
       midtermMark,
       finalMark,
       courseMark:    cm,
