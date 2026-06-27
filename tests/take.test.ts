@@ -77,6 +77,37 @@ describe('getTakePayload [Task 8: action selects dropped course_id/period_id col
   })
 })
 
+describe('getTakePayload – manual assessment', () => {
+  it('rejects with /manual/i when the assessment is_manual=true', async () => {
+    // Insert a manual assessment directly (importAssessment does not expose is_manual).
+    const admin = (await import('@/lib/supabase/server')).createAdminClient()
+    const { data: manualA, error: maErr } = await admin
+      .from('assessments')
+      .insert({
+        instructor_id: instructorId,
+        title: 'Manual Face-to-Face HW',
+        type: 'activity',
+        total_points: 100,
+        questions: [],
+        is_manual: true,
+      })
+      .select('id')
+      .single()
+    if (maErr) throw maErr
+
+    const { id: manualAssignId } = await seedAssignment({
+      assessmentId: manualA.id,
+      classId,
+      instructorId,
+    })
+
+    const manualStu = await enrolledStudent('take-manual@telos.test')
+    await setTestUser(manualStu.email, PASSWORD)
+
+    await expect(getTakePayload(manualAssignId)).rejects.toThrow(/manual/i)
+  })
+})
+
 describe('submitAssessment', () => {
   it('grades an all-items submission INCLUDING the bonus as 35/30 = 116.67', async () => {
     await enrolledStudent('take-bonus@telos.test')

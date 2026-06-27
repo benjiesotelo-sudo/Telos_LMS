@@ -197,6 +197,17 @@ describe('0008_assignment_meta schema', () => {
   })
 })
 
+describe('0010_manual_assessment schema', () => {
+  it('assessments table has is_manual column', async () => {
+    const admin = createAdminClient()
+    const { error } = await admin
+      .from('assessments')
+      .select('is_manual')
+      .limit(0)
+    expect(error).toBeNull()
+  })
+})
+
 describe('seed.sql pilot scoping', () => {
   it('seeds nothing for the bootstrap instructor on a fresh stack (no out-of-band instructor present)', async () => {
     // The whole run shares ONE `supabase db reset` (vitest.globalSetup), so global

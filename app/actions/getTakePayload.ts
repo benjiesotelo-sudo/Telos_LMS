@@ -31,10 +31,13 @@ export async function getTakePayload(
   // Reads ONLY assessments.questions — assessment_keys is never touched here.
   const { data: assessment, error: asErr } = await supabase
     .from('assessments')
-    .select('title, type, questions')
+    .select('title, type, questions, is_manual')
     .eq('id', assignment.assessment_id)
     .single()
   if (asErr || !assessment) throw new Error('Assessment not found.')
+
+  if (assessment.is_manual)
+    throw new Error('This is a manually-graded assessment and cannot be taken online.')
 
   return {
     title: assessment.title,
