@@ -2,12 +2,18 @@
 // console/page errors, and "stuck on Loading…". Run AFTER seed.mjs + a :3100 dev server.
 import { chromium } from 'playwright'
 import { mkdirSync } from 'fs'
+import { createClient } from '@supabase/supabase-js'
 
 const BASE = 'http://localhost:3100'
 const ADMIN_EMAIL = 'e2e-admin@local.test'
 const ADMIN_PASSWORD = 'E2e_admin_pass123!'
-const CLASS_ID = '5c497889-961b-45bc-abf9-b448846d4ad5'
-const COURSE_ID = '00d3d96d-3bd4-4c78-bdd3-5cd9e6a2f9eb'
+
+// Fetch the seeded class/course IDs from the local DB (robust to re-seeds).
+const sb = createClient('http://127.0.0.1:54321', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIM96RAZx35lJzdJsyH-qQwv8Hdp7fsn3W0YpN81IU', { auth: { persistSession: false } })
+const { data: cls } = await sb.from('classes').select('id, course_id').limit(1).single()
+const CLASS_ID = cls.id
+const COURSE_ID = cls.course_id
+console.log(`Using CLASS_ID=${CLASS_ID} COURSE_ID=${COURSE_ID}`)
 
 const ROUTES = [
   ['/instructor', 'Dashboard'],

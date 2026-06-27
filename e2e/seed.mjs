@@ -37,7 +37,13 @@ async function main() {
   if (asgErr) throw new Error(`assignment: ${asgErr.message}`)
   await admin.from('submissions').insert({ assignment_id: asg.id, student_id: studentId, instructor_id: adminId, answers: { q1: '2' }, earned: 1, possible: 1, score: 100, status: 'graded' })
 
-  console.log(JSON.stringify({ adminId, studentId, courseId: course.id, classId: cls.id, assignmentId: asg.id }, null, 2))
+  // A MANUAL assessment (offline 100-pt homework) assigned to the class + a manual grade override.
+  const { data: man, error: mErr } = await admin.from('assessments').insert({ instructor_id: adminId, title: 'Homework 1 (manual)', type: 'activity', total_points: 100, questions: [], is_manual: true }).select('id').single()
+  if (mErr) throw new Error(`manual assessment: ${mErr.message}`)
+  await admin.from('assignments').insert({ assessment_id: man.id, class_id: cls.id, instructor_id: adminId, period: 'midterm', active: true })
+  await admin.from('grade_overrides').insert({ student_id: studentId, assessment_id: man.id, class_id: cls.id, score: 85, note: 'face-to-face', instructor_id: adminId })
+
+  console.log(JSON.stringify({ adminId, studentId, courseId: course.id, classId: cls.id, assignmentId: asg.id, manualAssessmentId: man.id }, null, 2))
   console.log('SEED_OK')
 }
 main().catch((e) => { console.error('SEED_FAIL', e.message); process.exit(1) })
