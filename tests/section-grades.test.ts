@@ -266,9 +266,16 @@ describe('getSectionGrades — cell values', () => {
     expect(stuA.rawOverrides[activityAssessmentId]).toBe(75)
     expect(stuA.rawOverrides[quizAssessmentId]).toBeUndefined()
     expect(stuA.rawOverrides[examAssessmentId]).toBeUndefined()
+
+    // autoRaw exposes the auto-graded earned score for every submission —
+    // INCLUDING the activity that an override now shadows (so the editor can
+    // show "auto 50" and detect that the entered 75 differs from auto).
+    expect(stuA.autoRaw[quizAssessmentId]).toBe(80)
+    expect(stuA.autoRaw[activityAssessmentId]).toBe(50)
+    expect(stuA.autoRaw[examAssessmentId]).toBe(90)
   })
 
-  it('Student B (no submissions, no overrides) has all null cells and empty rawOverrides', async () => {
+  it('Student B (no submissions, no overrides) has all null cells and empty rawOverrides/autoRaw', async () => {
     await setTestUser(INSTR_EMAIL, PASSWORD)
     const result = await getSectionGrades({ classId })
     const stuB = result.students.find((s) => s.studentId === studentBId)!
@@ -277,6 +284,7 @@ describe('getSectionGrades — cell values', () => {
     expect(stuB.cells[activityAssessmentId]).toBeNull()
     expect(stuB.cells[examAssessmentId]).toBeNull()
     expect(stuB.rawOverrides).toEqual({})
+    expect(stuB.autoRaw).toEqual({})
   })
 })
 

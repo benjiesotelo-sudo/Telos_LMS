@@ -154,6 +154,14 @@ export interface SectionStudentRow {
    * Used to prefill the override input with the last-entered raw score.
    */
   rawOverrides: Record<string, number>
+  /**
+   * Auto-graded raw score (submissions.earned) for each assessment the student
+   * has an online submission for.  Present ONLY when a submission exists —
+   * manual/offline assessments never appear here.  The per-assessment GradeEditor
+   * uses this to show "auto N" and to decide whether an entered value differs
+   * from the auto score (an override is created only when it does).
+   */
+  autoRaw: Record<string, number>
   midtermMark: number | null
   finalMark:   number | null
   courseMark:  number | null

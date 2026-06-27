@@ -118,7 +118,20 @@ Large autonomous build. Branch ~45 commits beyond main. Verified: **231 tests gr
 - Files: `app/instructor/grades/GradeSheet.tsx` (split into a read-only sheet + a `GradeEditor` component), `app/instructor/grades/page.tsx`. Data already in `getSectionGrades` (`cells` %, `rawOverrides`, `totalPoints` per assessment).
 - **Perf:** `getSectionGrades` does ~5 sequential cloud queries — parallelize with `Promise.all` to speed up the grades page. (Dev-mode + cloud latency is the main slowness; production/Vercel is much faster.)
 
-## ▶▶ FIRST TASK WHEN RESUMING (user directive 2026-06-27): build the **grade editor** (the two-table Grades split described in "NEXT-SESSION feature" above) BEFORE anything else. Then Theme D / hardening.
+## ✅ GRADE EDITOR — BUILT (2026-06-28) on branch `feat/grade-editor` (verified; NOT merged to main)
+Implements the FINAL CHOSEN DESIGN above (Option 1, per-assessment entry). Verified: **237 tests green** (was 231; +6 new), **`npm run build` clean**, **e2e smoke 12/12**, and a focused Playwright interaction test **5/5** (Save creates override when entry≠auto; top sheet reflects it via `refresh()`; entry==auto deletes the override; ↺ revert deletes). Screenshot: `e2e/shots/grade-editor.png`.
+
+### What changed
+- **Data (`app/actions/getSectionGrades.ts` + `lib/types.ts`):** added per-student **`autoRaw`** map (`submission.earned`, present even when an override shadows it) so the editor can show "auto N" and apply the ≠-auto rule. **Parallelized** the 6 sequential cloud reads into 3 `Promise.all` round-trips (role+class, enrollments+assignments, submissions+overrides) — the perf follow-up.
+- **New actions:** `deleteGradeOverride({studentId,assessmentId,classId})` (the ↺ revert; owner/admin-guarded; deleting a non-existent override is a no-op success) and `setGradeOverrides({classId,assessmentId,entries:[{studentId,score:number|null}]})` (batch column Save: one owner-guard, one bulk upsert for score≠null, one bulk delete for score==null, one `refresh()`). `score:null` = revert-to-auto.
+- **UI (`app/instructor/grades/`):** `GradeSheet.tsx` is now **read-only** (the submit report) — inline editing stripped; assessment **column headers are clickable** to select that column (highlighted gold). New **`GradeEditor.tsx`** (assessment dropdown synced with header clicks; per-student `[score] / total_points` input, "auto N", per-row ↺ revert, one **Save column** button; pending/disabled states — no frozen screen). New **`GradesView.tsx`** client parent holds the shared `selectedAssessmentId` (defaults to first assessment). The editor remounts on a data-signature `key` so inputs re-prefill after Save/revert refresh.
+- **≠-auto rule (decision #2 / the Mamoun-311% safeguard):** an override is created only when the entered value differs from the auto value; entering the auto value (or clearing the cell) **deletes** any existing override instead of storing a redundant one.
+- **Tests:** `tests/grade-overrides-editor.test.ts` (new) covers both actions incl. owner-guard, no-op empty save, bonus>100 unclamped, revert-of-nonexistent; `tests/section-grades.test.ts` extended for `autoRaw`.
+
+### LEFT TO DO (grade editor)
+- **User's check** pending: open Grades → pick a section → enter/revert a few scores and confirm the top sheet + course mark update as expected.
+- **Merge** `feat/grade-editor` → `main` when satisfied (no new migrations — all additive code; cloud DB already at 0010). Run `npm test` on merged main, push (Vercel auto-deploys).
+- Then **Theme D** (student experience) / hardening.
 
 ### Test data: INTENTIONALLY KEPT (user still testing — 2026-06-28)
 The 6 Smoke Student accounts (+smoke emails / SMOKE-* numbers), SMOKE101 course/class, and "Homework Smoke 1" are deliberately retained for now. Do NOT clean them until the user says so. When ready, the SCOPED, verified-safe cleanup (cannot touch Mamoun/Benjie/AMS0011) is:

@@ -1,6 +1,4 @@
 'use client'
-import { useState } from 'react'
-import { setGradeOverride } from '@/app/actions/setGradeOverride'
 import type { SectionGrades, SectionAssessmentMeta } from '@/lib/types'
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
@@ -32,128 +30,15 @@ function assessmentOrder(a: SectionAssessmentMeta): number {
   return a.type === 'quiz' ? 0 : a.type === 'activity' ? 1 : 2
 }
 
-// ── OverrideCell ─────────────────────────────────────────────────────────────
+// ── ReadCell ─────────────────────────────────────────────────────────────────
+// The grade sheet is the read-only submit report. Editing happens below it in
+// the per-assessment GradeEditor; cells here just display the computed %.
 
-interface OverrideCellProps {
-  /** Computed cell percentage (displayed value). */
-  value: number | null
-  studentId: string
-  assessmentId: string
-  classId: string
-  /** Assessment's total_points — shown as "/ {totalPoints}" hint in edit mode. */
-  totalPoints: number
-  /**
-   * The raw override score already stored for this cell (from rawOverrides).
-   * Used to prefill the edit input so the instructor sees what they entered last.
-   * Undefined when no override exists (cell is from an auto-graded submission or empty).
-   */
-  rawScore: number | undefined
-}
-
-function OverrideCell({
-  value,
-  studentId,
-  assessmentId,
-  classId,
-  totalPoints,
-  rawScore,
-}: OverrideCellProps) {
-  const [editing, setEditing] = useState(false)
-  const [inputVal, setInputVal] = useState('')
-  const [saving, setSaving] = useState(false)
-
-  async function handleSave() {
-    const trimmed = inputVal.trim()
-    if (trimmed === '') {
-      setEditing(false)
-      return
-    }
-    const num = parseFloat(trimmed)
-    if (isNaN(num)) {
-      setEditing(false)
-      return
-    }
-    setSaving(true)
-    try {
-      // Score is stored as the raw value (e.g. 85 on a 100-pt item).
-      // getSectionGrades converts it to % via: raw / total_points * 100.
-      // setGradeOverride calls server-side refresh() (next/cache), which
-      // re-renders this page with the recomputed marks — no client refresh needed.
-      await setGradeOverride({ studentId, assessmentId, classId, score: num })
-    } catch (err) {
-      console.error('Grade override failed:', err)
-    } finally {
-      setSaving(false)
-      setEditing(false)
-    }
-  }
-
-  if (saving) {
-    return (
-      <td style={tdStyle}>
-        <span style={{ color: 'var(--gray)', fontSize: 11 }}>saving…</span>
-      </td>
-    )
-  }
-
-  if (editing) {
-    return (
-      <td style={tdStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
-          <input
-            autoFocus
-            type="number"
-            min={0}
-            step={0.1}
-            value={inputVal}
-            title={`Enter raw score out of ${totalPoints}`}
-            onChange={(e) => setInputVal(e.target.value)}
-            onBlur={handleSave}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') {
-                e.preventDefault()
-                handleSave()
-              }
-              if (e.key === 'Escape') {
-                // Clear first so the blur-triggered handleSave early-returns
-                // on empty input (Escape must cancel, not persist).
-                setInputVal('')
-                setEditing(false)
-              }
-            }}
-            style={{
-              width: 48,
-              padding: '2px 4px',
-              fontSize: 12,
-              border: '1.5px solid var(--green)',
-              borderRadius: 3,
-              outline: 'none',
-              textAlign: 'right',
-            }}
-          />
-          <span style={{ fontSize: 11, color: 'var(--gray)', whiteSpace: 'nowrap' }}>
-            / {totalPoints}
-          </span>
-        </div>
-      </td>
-    )
-  }
-
+function ReadCell({ value, selected }: { value: number | null; selected: boolean }) {
   return (
-    <td
-      style={{ ...tdStyle, cursor: 'pointer', userSelect: 'none' }}
-      title={`Click to enter raw score out of ${totalPoints} (system computes %)`}
-      onClick={() => {
-        // Prefill with the previously-entered raw score if an override exists;
-        // otherwise leave blank so the instructor enters a fresh value.
-        setInputVal(rawScore !== undefined ? String(rawScore) : '')
-        setEditing(true)
-      }}
-    >
+    <td style={{ ...tdStyle, background: selected ? '#fffbe6' : undefined }}>
       {value !== null ? (
-        <span style={{ color: scoreColor(value), fontWeight: 500 }}>
-          {value.toFixed(1)}
-        </span>
+        <span style={{ color: scoreColor(value), fontWeight: 500 }}>{value.toFixed(1)}</span>
       ) : (
         <span style={{ color: 'var(--gray)' }}>—</span>
       )}
@@ -165,10 +50,13 @@ function OverrideCell({
 
 interface Props {
   grades: SectionGrades
-  classId: string
+  /** assessmentId currently selected for editing (highlights that column). */
+  selectedAssessmentId: string | null
+  /** Called when an assessment column header is clicked — selects it for editing. */
+  onSelectAssessment: (assessmentId: string) => void
 }
 
-export function GradeSheet({ grades, classId }: Props) {
+export function GradeSheet({ grades, selectedAssessmentId, onSelectAssessment }: Props) {
   const { class: cls, assessments, students } = grades
 
   // Sort within each period: quizzes → activities → exams
@@ -185,6 +73,32 @@ export function GradeSheet({ grades, classId }: Props) {
   const fSpan = finalCols.length + 1
 
   const { wtQuiz, wtPaper, wtExam } = cls.weights
+
+  // Shared renderer for a clickable assessment column header.
+  function colHeader(a: SectionAssessmentMeta, isFirst: boolean) {
+    const selected = a.assessmentId === selectedAssessmentId
+    return (
+      <th
+        key={a.id}
+        onClick={() => onSelectAssessment(a.assessmentId)}
+        title={`${a.title} — click to edit this column below`}
+        style={{
+          ...thBase,
+          background: selected ? '#fff1b8' : typeBg(a.type),
+          maxWidth: 100,
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          cursor: 'pointer',
+          userSelect: 'none',
+          borderLeft: isFirst ? '2px solid var(--green)' : undefined,
+          boxShadow: selected ? 'inset 0 -3px 0 var(--gold-dk)' : undefined,
+        }}
+      >
+        <span style={{ color: 'var(--gray)', marginRight: 2 }}>[{typeTag(a.type)}]</span>
+        {a.title}
+      </th>
+    )
+  }
 
   return (
     <div className="feu-card" style={{ marginBottom: 20 }}>
@@ -220,7 +134,7 @@ export function GradeSheet({ grades, classId }: Props) {
           [E]&nbsp;=&nbsp;Exam
         </span>
         <span style={{ color: 'var(--gray)' }}>
-          Click any score cell to enter a raw score out of the item&apos;s points — the system computes the %.
+          This sheet is read-only. Click a column header to edit that assessment&apos;s scores in the editor below.
         </span>
       </div>
 
@@ -287,25 +201,7 @@ export function GradeSheet({ grades, classId }: Props) {
 
               {/* ── Row 2: Assessment titles + period-mark labels ─── */}
               <tr>
-                {midtermCols.map((a, i) => (
-                  <th
-                    key={a.id}
-                    style={{
-                      ...thBase,
-                      background: typeBg(a.type),
-                      maxWidth: 100,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      borderLeft: i === 0 ? '2px solid var(--green)' : undefined,
-                    }}
-                    title={a.title}
-                  >
-                    <span style={{ color: 'var(--gray)', marginRight: 2 }}>
-                      [{typeTag(a.type)}]
-                    </span>
-                    {a.title}
-                  </th>
-                ))}
+                {midtermCols.map((a, i) => colHeader(a, i === 0))}
                 <th
                   style={{
                     ...thBase,
@@ -319,25 +215,7 @@ export function GradeSheet({ grades, classId }: Props) {
                   MG
                 </th>
 
-                {finalCols.map((a, i) => (
-                  <th
-                    key={a.id}
-                    style={{
-                      ...thBase,
-                      background: typeBg(a.type),
-                      maxWidth: 100,
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      borderLeft: i === 0 ? '2px solid var(--green)' : undefined,
-                    }}
-                    title={a.title}
-                  >
-                    <span style={{ color: 'var(--gray)', marginRight: 2 }}>
-                      [{typeTag(a.type)}]
-                    </span>
-                    {a.title}
-                  </th>
-                ))}
+                {finalCols.map((a, i) => colHeader(a, i === 0))}
                 <th
                   style={{
                     ...thBase,
@@ -415,14 +293,10 @@ export function GradeSheet({ grades, classId }: Props) {
 
                     {/* Midterm assessment cells */}
                     {midtermCols.map((a) => (
-                      <OverrideCell
+                      <ReadCell
                         key={a.id}
                         value={stu.cells[a.assessmentId] ?? null}
-                        studentId={stu.studentId}
-                        assessmentId={a.assessmentId}
-                        classId={classId}
-                        totalPoints={a.totalPoints}
-                        rawScore={stu.rawOverrides[a.assessmentId]}
+                        selected={a.assessmentId === selectedAssessmentId}
                       />
                     ))}
 
@@ -445,14 +319,10 @@ export function GradeSheet({ grades, classId }: Props) {
 
                     {/* Final assessment cells */}
                     {finalCols.map((a) => (
-                      <OverrideCell
+                      <ReadCell
                         key={a.id}
                         value={stu.cells[a.assessmentId] ?? null}
-                        studentId={stu.studentId}
-                        assessmentId={a.assessmentId}
-                        classId={classId}
-                        totalPoints={a.totalPoints}
-                        rawScore={stu.rawOverrides[a.assessmentId]}
+                        selected={a.assessmentId === selectedAssessmentId}
                       />
                     ))}
 

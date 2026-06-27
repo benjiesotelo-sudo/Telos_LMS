@@ -3,7 +3,7 @@ import { createClient } from '@/lib/supabase/server'
 import { listClasses } from '@/app/actions/listClasses'
 import { getSectionGrades } from '@/app/actions/getSectionGrades'
 import { SectionPicker } from './SectionPicker'
-import { GradeSheet } from './GradeSheet'
+import { GradesView } from './GradesView'
 
 export default async function GradesPage({
   searchParams,
@@ -35,7 +35,8 @@ export default async function GradesPage({
     <div className="feu-page" style={{ maxWidth: 'none' }}>
       <h1>Grades</h1>
       <p className="feu-page-sub">
-        Select a class section to view the FEU grade sheet and enter manual overrides.
+        Select a class section to view the read-only FEU grade sheet, then enter raw scores
+        per assessment in the editor below.
       </p>
 
       <SectionPicker key={classId ?? ''} classes={classes} selected={classId} />
@@ -50,7 +51,7 @@ export default async function GradesPage({
         </p>
       )}
 
-      {grades && <GradeSheet grades={grades} classId={classId!} />}
+      {grades && <GradesView grades={grades} classId={classId!} />}
     </div>
   )
 }
