@@ -160,14 +160,14 @@ Autonomous build per the agreed design. **264 tests green** (was 239; +25), **`n
 ## 📋 REMAINING LMS WORK — canonical checklist (2026-06-28)
 Single source of truth for what's left to build. Order reflects "student experience first."
 
-### Features
-1. ✅ **Theme D — Student experience** — Dashboard/To-Do/Grades/class-detail BUILT this session. ⬜ STILL TODO: a dedicated **pre-quiz screen** before a timed assessment (today the timer starts directly on the take page).
-2. ✅ **Quiz timer + live countdown + auto-submit** — BUILT (migration 0011).
-3. ✅ **Student answer review (type-aware reveal)** — BUILT.
-4. ✅ **Invite existing users + in-app accept/decline** — BUILT (migration 0012).
-5. ✅ **Manage students + removal-request approval** — BUILT (migration 0013).
-6. ✅ **Gradebook CSV export** — BUILT.
-   - ⬜ Remaining feature: **pre-quiz screen** (above). Everything else in this list shipped on `feat/theme-d-student` (local).
+### Features — ✅ ALL BUILT (branch `feat/theme-d-student`, local)
+1. ✅ **Theme D — Student experience** — Dashboard (To-Do/Done tabs) / Classes / Grades / class-detail + **pre-quiz screen** (built via getAttemptStatus + TakeGate).
+2. ✅ **Quiz timer + live countdown + auto-submit** (migration 0011).
+3. ✅ **Student answer review (type-aware reveal)**.
+4. ✅ **Invite existing users + in-app accept/decline** (migration 0012).
+5. ✅ **Manage students + removal-request approval** (migration 0013).
+6. ✅ **Gradebook CSV export**.
+   - No code features remain. Plus the 2026-06-29 rounds: assessment settings, 4-type taxonomy + graded toggle, Admin Controls hub, sticky sidebar, Users search + pinned actions, pending-list redesign + join reason.
 
 ### Hardening — ✅ ALL BUILT this session (migrations 0014–0017, branch `feat/theme-d-student`)
 - ✅ Server-side auto-save + cross-device resume — `quiz_attempts.answers` (0017) + `saveDraft`/`getDraft`; TakeForm saves to localStorage + server, resumes from server.
