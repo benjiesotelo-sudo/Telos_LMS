@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAssessmentKey } from '@/app/actions/getAssessmentKey'
-import { DurationSetting } from './DurationSetting'
+import { AssessmentSettings } from './AssessmentSettings'
 
 export default async function AssessmentPreviewPage({
   params,
@@ -40,13 +40,14 @@ export default async function AssessmentPreviewPage({
 
   const { title, type, questions, answerKey } = detail
 
-  // Current default time limit (instructor owns the row → RLS allows the read).
-  const { data: durRow } = await supabase
+  // Current settings (instructor owns the row → RLS allows the read).
+  const { data: setRow } = await supabase
     .from('assessments')
-    .select('default_duration_minutes')
+    .select('default_duration_minutes, is_manual')
     .eq('id', assessmentId)
     .maybeSingle()
-  const defaultDuration = (durRow?.default_duration_minutes ?? null) as number | null
+  const defaultDuration = (setRow?.default_duration_minutes ?? null) as number | null
+  const isManual = setRow?.is_manual === true
 
   const typeLabel: Record<string, string> = {
     quiz:     'Quiz',
@@ -85,11 +86,16 @@ export default async function AssessmentPreviewPage({
         <p className="feu-muted" style={{ fontSize: 13, margin: '0 0 14px' }}>
           Answer key preview &mdash; instructor view only
         </p>
-        {type !== 'activity' && (
-          <div style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-            <DurationSetting assessmentId={assessmentId} current={defaultDuration} />
-          </div>
-        )}
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+          <h2 style={{ fontSize: 15, margin: '0 0 12px', color: 'var(--green)' }}>Settings</h2>
+          <AssessmentSettings
+            assessmentId={assessmentId}
+            title={title}
+            type={type as 'activity' | 'quiz' | 'exam'}
+            defaultDuration={defaultDuration}
+            isManual={isManual}
+          />
+        </div>
       </section>
 
       {/* Questions */}

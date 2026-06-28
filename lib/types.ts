@@ -178,12 +178,15 @@ export interface ClassDetailAssessment {
   assessmentId: string
   title: string
   type: 'activity' | 'quiz' | 'exam'
+  isManual: boolean
   period: 'midterm' | 'final'
   active: boolean
   revealAnswers: boolean
   opensAt: string | null
   closesAt: string | null
   dueDate: string | null
+  /** Effective per-attempt time limit (assignment override → else assessment default; null = untimed). */
+  durationMinutes: number | null
 }
 
 export interface ClassDetailStudent {

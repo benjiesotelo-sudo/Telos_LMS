@@ -18,6 +18,26 @@ export function AssignmentMetaControls({ assignment }: AssignmentMetaControlsPro
   const [opensAt, setOpensAt] = useState(assignment.opensAt ?? '')
   const [closesAt, setClosesAt] = useState(assignment.closesAt ?? '')
   const [dueDate, setDueDate] = useState(assignment.dueDate ?? '')
+  const [duration, setDuration] = useState(assignment.durationMinutes != null ? String(assignment.durationMinutes) : '')
+
+  // Saves ONLY the time limit (independent of the date fields). Blank = untimed.
+  function saveDuration() {
+    const t = duration.trim()
+    const minutes = t === '' ? null : parseFloat(t)
+    if (minutes !== null && (isNaN(minutes) || minutes <= 0)) {
+      setStatus('Error: time limit must be a positive number')
+      return
+    }
+    startTransition(async () => {
+      try {
+        await setAssignmentMeta({ assignmentId: assignment.assignmentId, durationMinutes: minutes })
+        setStatus('Saved')
+        setTimeout(() => setStatus(null), 2000)
+      } catch (e) {
+        setStatus(`Error: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    })
+  }
 
   function save(overrides: Partial<{
     active: boolean
@@ -164,6 +184,24 @@ export function AssignmentMetaControls({ assignment }: AssignmentMetaControlsPro
             style={{ fontSize: 12, border: '1px solid var(--line, #e2e8e4)', borderRadius: 4, padding: '2px 4px' }}
           />
         </label>
+        {!assignment.isManual && (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12 }}>
+            <span className="feu-muted">Time limit:</span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              placeholder="untimed"
+              value={duration}
+              disabled={isPending}
+              onChange={(e) => setDuration(e.target.value)}
+              onBlur={saveDuration}
+              title="Per-attempt minutes for this section. Blank = untimed / use the assessment default."
+              style={{ width: 78, fontSize: 12, border: '1px solid var(--line, #e2e8e4)', borderRadius: 4, padding: '2px 4px' }}
+            />
+            <span className="feu-muted">min</span>
+          </label>
+        )}
       </div>
     </div>
   )

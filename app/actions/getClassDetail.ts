@@ -45,7 +45,7 @@ export async function getClassDetail(input: { classId: string }): Promise<ClassD
   const { data: assignments, error: assignErr } = await admin
     .from('assignments')
     .select(
-      'id, assessment_id, period, active, reveal_answers, opens_at, closes_at, due_date, assessment:assessment_id(title, type)',
+      'id, assessment_id, period, active, reveal_answers, opens_at, closes_at, due_date, duration_minutes, assessment:assessment_id(title, type, is_manual, default_duration_minutes)',
     )
     .eq('class_id', input.classId)
   if (assignErr) throw new Error(`Failed to load assignments: ${assignErr.message}`)
@@ -55,12 +55,15 @@ export async function getClassDetail(input: { classId: string }): Promise<ClassD
     assessmentId:   a.assessment_id             as string,
     title:          (a.assessment?.title ?? '') as string,
     type:           (a.assessment?.type  ?? 'quiz') as 'activity' | 'quiz' | 'exam',
+    isManual:       a.assessment?.is_manual === true,
     period:         a.period                    as 'midterm' | 'final',
     active:         a.active                    as boolean,
     revealAnswers:  a.reveal_answers            as boolean,
     opensAt:        (a.opens_at  ?? null)       as string | null,
     closesAt:       (a.closes_at ?? null)       as string | null,
     dueDate:        (a.due_date  ?? null)       as string | null,
+    // Effective time limit for the editor hint: per-assignment override, else the assessment default.
+    durationMinutes: (a.duration_minutes ?? a.assessment?.default_duration_minutes ?? null) as number | null,
   }))
 
   // ── 4. Enrolled students ───────────────────────────────────────────────────
