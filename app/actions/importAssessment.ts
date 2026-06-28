@@ -57,29 +57,20 @@ export async function importAssessment(
     return base
   })
 
-  // --- insert assessment + key (service role bypasses RLS) ---
-  const { data: inserted, error: insErr } = await admin
-    .from('assessments')
-    .insert({
-      instructor_id: user.id,
-      title: json.title,
-      type: json.type,
-      total_points: json.total_points,
-      questions,
-    })
-    .select('id')
-    .single()
-  if (insErr || !inserted) {
-    throw new Error(`Failed to insert assessment: ${insErr?.message ?? 'unknown'}`)
-  }
-
-  const { error: keyErr } = await admin.from('assessment_keys').insert({
-    assessment_id: inserted.id,
-    answer_key: json.answer_key,
+  // --- insert assessment + key ATOMICALLY (single transaction in the RPC) ---
+  // A function body is one transaction, so a key-insert failure rolls back the
+  // assessment insert too — no orphan rows.
+  const { data: newId, error: rpcErr } = await admin.rpc('import_assessment', {
+    p_instructor: user.id,
+    p_title: json.title,
+    p_type: json.type,
+    p_total_points: json.total_points,
+    p_questions: questions,
+    p_answer_key: json.answer_key,
   })
-  if (keyErr) {
-    throw new Error(`Failed to insert answer key: ${keyErr.message}`)
+  if (rpcErr || !newId) {
+    throw new Error(`Failed to import assessment: ${rpcErr?.message ?? 'unknown'}`)
   }
 
-  return { assessmentId: inserted.id }
+  return { assessmentId: newId as string }
 }

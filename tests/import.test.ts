@@ -90,4 +90,23 @@ describe('importAssessment', () => {
     }
     await expect(importAssessment(broken)).rejects.toThrow()
   })
+
+  it('is atomic: a failed answer-key insert leaves NO orphan assessment row', async () => {
+    const admin = createAdminClient()
+    const { data: owner } = await admin.from('profiles').select('id').eq('role', 'instructor').limit(1).single()
+    const uniqueTitle = `ORPHAN_PROBE_${Date.now()}`
+    // Call the RPC directly with a NULL answer_key → the second insert violates NOT NULL,
+    // rolling back the whole transaction (so the assessment must not persist).
+    const { error } = await admin.rpc('import_assessment', {
+      p_instructor: owner!.id,
+      p_title: uniqueTitle,
+      p_type: 'quiz',
+      p_total_points: 1,
+      p_questions: [],
+      p_answer_key: null,
+    })
+    expect(error).not.toBeNull()
+    const { data: orphans } = await admin.from('assessments').select('id').eq('title', uniqueTitle)
+    expect(orphans ?? []).toHaveLength(0)
+  })
 })
