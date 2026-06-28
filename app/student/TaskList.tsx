@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import type { StudentTask } from '@/lib/types'
+import { typeName } from '@/lib/assessmentType'
 
 const MANILA = 'Asia/Manila'
 function fmtDate(iso: string | null): string | null {
@@ -17,12 +18,9 @@ function fmtDate(iso: string | null): string | null {
   }
 }
 
-function typeLabel(t: string): string {
-  return t === 'quiz' ? 'Quiz' : t === 'activity' ? 'Homework' : 'Exam'
-}
 function typeBadge(t: string): React.CSSProperties {
-  const bg = t === 'quiz' ? '#eef6f1' : t === 'activity' ? '#fff7e6' : '#eef1fb'
-  const fg = t === 'quiz' ? 'var(--green)' : t === 'activity' ? 'var(--gold-dk)' : '#3b5bdb'
+  const bg = t === 'quiz' ? '#eef6f1' : t === 'homework' ? '#f3f0fb' : t === 'activity' ? '#fff7e6' : '#eef1fb'
+  const fg = t === 'quiz' ? 'var(--green)' : t === 'homework' ? '#6d4abc' : t === 'activity' ? 'var(--gold-dk)' : '#3b5bdb'
   return { background: bg, color: fg, fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 4, textTransform: 'uppercase', letterSpacing: '0.4px' }
 }
 function scoreColor(pct: number): string {
@@ -76,6 +74,7 @@ export function TaskList({ tasks }: { tasks: (StudentTask & { classLabel?: strin
         const due = fmtDate(t.closesAt ?? t.dueDate)
         const metaParts: string[] = []
         if (t.classLabel) metaParts.push(t.classLabel)
+        if (!t.isGraded) metaParts.push('Practice (ungraded)')
         // A submitted task always shows its submission status (never a deadline).
         if (t.submitted) metaParts.push(t.submittedAt ? `Submitted ${fmtDate(t.submittedAt)}` : 'Submitted')
         else if (due) metaParts.push(`${t.closesAt ? 'Closes' : 'Due'} ${due}`)
@@ -92,7 +91,7 @@ export function TaskList({ tasks }: { tasks: (StudentTask & { classLabel?: strin
               background: '#fff',
             }}
           >
-            <span style={typeBadge(t.type)}>{typeLabel(t.type)}</span>
+            <span style={typeBadge(t.type)}>{typeName(t.type)}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{t.title}</div>
               {metaParts.length > 0 && (
@@ -112,7 +111,8 @@ export function TaskList({ tasks }: { tasks: (StudentTask & { classLabel?: strin
 export function GroupedTaskList({ tasks }: { tasks: StudentTask[] }) {
   const groups: { label: string; items: StudentTask[] }[] = [
     { label: 'Quizzes', items: tasks.filter((t) => t.type === 'quiz') },
-    { label: 'Homework', items: tasks.filter((t) => t.type === 'activity') },
+    { label: 'Homework', items: tasks.filter((t) => t.type === 'homework') },
+    { label: 'Activities', items: tasks.filter((t) => t.type === 'activity') },
     { label: 'Exams', items: tasks.filter((t) => t.type === 'exam') },
   ]
   return (

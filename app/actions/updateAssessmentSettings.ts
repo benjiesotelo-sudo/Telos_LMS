@@ -5,9 +5,11 @@ import { refresh } from 'next/cache'
 export interface UpdateAssessmentSettingsInput {
   assessmentId: string
   title?: string
-  type?: 'activity' | 'quiz' | 'exam'
+  type?: 'quiz' | 'homework' | 'activity' | 'exam'
   /** Default per-attempt time limit in minutes; null = untimed. Omit to leave unchanged. */
   defaultDurationMinutes?: number | null
+  /** Counts toward the grade. Only meaningful for homework/activity — quiz/exam are forced graded. */
+  isGraded?: boolean
 }
 
 /**
@@ -29,7 +31,7 @@ export async function updateAssessmentSettings(
   const admin = createAdminClient()
   const { data: asmt, error: asmtErr } = await admin
     .from('assessments')
-    .select('instructor_id')
+    .select('instructor_id, type')
     .eq('id', input.assessmentId)
     .single()
   if (asmtErr || !asmt) throw new Error('Assessment not found')
@@ -43,7 +45,7 @@ export async function updateAssessmentSettings(
     update.title = t
   }
   if (input.type !== undefined) {
-    if (!['activity', 'quiz', 'exam'].includes(input.type)) throw new Error('Invalid assessment type')
+    if (!['quiz', 'homework', 'activity', 'exam'].includes(input.type)) throw new Error('Invalid assessment type')
     update.type = input.type
   }
   if (input.defaultDurationMinutes !== undefined) {
@@ -53,6 +55,14 @@ export async function updateAssessmentSettings(
       input.defaultDurationMinutes > 0
         ? Math.round(input.defaultDurationMinutes)
         : null
+  }
+
+  // Graded flag: quizzes & exams are ALWAYS graded. Homework/activity may be ungraded (practice).
+  const effectiveType = (input.type ?? asmt.type) as string
+  if (effectiveType === 'quiz' || effectiveType === 'exam') {
+    update.is_graded = true
+  } else if (input.isGraded !== undefined) {
+    update.is_graded = input.isGraded
   }
 
   if (Object.keys(update).length === 0) return { ok: true }

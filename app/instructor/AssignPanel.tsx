@@ -1,12 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { createAssignment } from '@/app/actions/createAssignment'
-
-const ASSESSMENT_TYPE_LABEL: Record<string, string> = {
-  quiz: 'Quiz',
-  activity: 'Paper / Activity',
-  exam: 'Exam',
-}
+import { typeName } from '@/lib/assessmentType'
 
 export function AssignPanel({
   classes,
@@ -87,7 +82,7 @@ export function AssignPanel({
             <option value="">— select an assessment —</option>
             {assessments.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.title} ({ASSESSMENT_TYPE_LABEL[a.type] ?? a.type})
+                {a.title} ({typeName(a.type)})
               </option>
             ))}
           </select>

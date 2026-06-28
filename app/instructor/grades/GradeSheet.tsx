@@ -84,7 +84,7 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
     return (
       <th
         key={a.id}
-        title={a.title}
+        title={a.graded ? a.title : `${a.title} — ungraded (not counted in marks)`}
         style={{
           ...thBase,
           background: typeBg(a.type),
@@ -92,10 +92,12 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           borderLeft: isFirst ? '2px solid var(--green)' : undefined,
+          opacity: a.graded ? 1 : 0.6,
         }}
       >
         <span style={{ color: 'var(--gray)', marginRight: 2 }}>[{typeTag(a.type)}]</span>
         {a.title}
+        {!a.graded && <span style={{ display: 'block', fontSize: 9, color: 'var(--gray)', fontWeight: 400 }}>ungraded</span>}
       </th>
     )
   }
@@ -145,7 +147,7 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
           <strong style={{ color: 'var(--ink)' }}>Grade weights:</strong>&nbsp; Quizzes&nbsp;
           {Math.round(wtQuiz * 100)}%&nbsp;·&nbsp;Papers/HW&nbsp;{Math.round(wtPaper * 100)}%&nbsp;·&nbsp;Exam&nbsp;{Math.round(wtExam * 100)}%
         </span>
-        <span>[Q]&nbsp;Quiz&nbsp;·&nbsp;[P]&nbsp;Paper/Activity&nbsp;·&nbsp;[E]&nbsp;Exam</span>
+        <span>[Q]&nbsp;Quiz&nbsp;·&nbsp;[H]&nbsp;Homework&nbsp;·&nbsp;[P]&nbsp;Activity&nbsp;·&nbsp;[E]&nbsp;Exam</span>
         <span>
           <span style={{ color: 'var(--gold-dk)' }}>•</span>&nbsp;amber&nbsp;=&nbsp;manually edited grade. Edit grades in the Grade Editor below.
         </span>

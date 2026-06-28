@@ -56,7 +56,7 @@ export async function getSectionGrades(input: {
       .eq('class_id', input.classId),
     admin
       .from('assignments')
-      .select('id, assessment_id, period, assessment:assessment_id(title, type, total_points)')
+      .select('id, assessment_id, period, assessment:assessment_id(title, type, total_points, is_graded)')
       .eq('class_id', input.classId),
   ])
   if (enrollErr) throw new Error(`Failed to load enrollments: ${enrollErr.message}`)
@@ -72,7 +72,8 @@ export async function getSectionGrades(input: {
     id:           a.id           as string,
     assessmentId: a.assessment_id as string,
     title:        (a.assessment?.title ?? '') as string,
-    type:         (a.assessment?.type  ?? 'quiz') as 'activity' | 'quiz' | 'exam',
+    type:         (a.assessment?.type  ?? 'quiz') as SectionAssessmentMeta['type'],
+    graded:       a.assessment?.is_graded !== false,
     period:       a.period as 'midterm' | 'final',
     totalPoints:  Number(a.assessment?.total_points ?? 0),
   }))

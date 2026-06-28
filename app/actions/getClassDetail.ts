@@ -1,6 +1,6 @@
 'use server'
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import type { ClassDetail } from '@/lib/types'
+import type { ClassDetail, ClassDetailAssessment } from '@/lib/types'
 
 export async function getClassDetail(input: { classId: string }): Promise<ClassDetail> {
   // ── 1. Auth + owner guard ─────────────────────────────────────────────────
@@ -45,7 +45,7 @@ export async function getClassDetail(input: { classId: string }): Promise<ClassD
   const { data: assignments, error: assignErr } = await admin
     .from('assignments')
     .select(
-      'id, assessment_id, period, active, reveal_answers, opens_at, closes_at, due_date, duration_minutes, assessment:assessment_id(title, type, is_manual, default_duration_minutes)',
+      'id, assessment_id, period, active, reveal_answers, opens_at, closes_at, due_date, duration_minutes, assessment:assessment_id(title, type, is_manual, default_duration_minutes, is_graded)',
     )
     .eq('class_id', input.classId)
   if (assignErr) throw new Error(`Failed to load assignments: ${assignErr.message}`)
@@ -54,8 +54,9 @@ export async function getClassDetail(input: { classId: string }): Promise<ClassD
     assignmentId:   a.id                       as string,
     assessmentId:   a.assessment_id             as string,
     title:          (a.assessment?.title ?? '') as string,
-    type:           (a.assessment?.type  ?? 'quiz') as 'activity' | 'quiz' | 'exam',
+    type:           (a.assessment?.type  ?? 'quiz') as ClassDetailAssessment['type'],
     isManual:       a.assessment?.is_manual === true,
+    graded:         a.assessment?.is_graded !== false,
     period:         a.period                    as 'midterm' | 'final',
     active:         a.active                    as boolean,
     revealAnswers:  a.reveal_answers            as boolean,

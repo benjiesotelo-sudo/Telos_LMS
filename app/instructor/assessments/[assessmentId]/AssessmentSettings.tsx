@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { updateAssessmentSettings } from '@/app/actions/updateAssessmentSettings'
+import type { AssessmentType } from '@/lib/types'
 
 export function AssessmentSettings({
   assessmentId,
@@ -8,18 +9,25 @@ export function AssessmentSettings({
   type,
   defaultDuration,
   isManual,
+  isGraded,
 }: {
   assessmentId: string
   title: string
-  type: 'activity' | 'quiz' | 'exam'
+  type: AssessmentType
   defaultDuration: number | null
   isManual: boolean
+  isGraded: boolean
 }) {
   const [name, setName] = useState(title)
-  const [kind, setKind] = useState<'activity' | 'quiz' | 'exam'>(type)
+  const [kind, setKind] = useState<AssessmentType>(type)
   const [dur, setDur] = useState<string>(defaultDuration != null ? String(defaultDuration) : '')
+  const [graded, setGraded] = useState(isGraded)
   const [saving, setSaving] = useState(false)
   const [msg, setMsg] = useState<string | null>(null)
+
+  // Quizzes & exams are always graded; only homework/activity can be ungraded (practice).
+  const canBeUngraded = kind === 'homework' || kind === 'activity'
+  const effectiveGraded = canBeUngraded ? graded : true
 
   async function save() {
     setSaving(true)
@@ -42,6 +50,7 @@ export function AssessmentSettings({
         title: name,
         type: kind,
         defaultDurationMinutes: minutes,
+        isGraded: effectiveGraded,
       })
       setMsg('Saved.')
     } catch (e) {
@@ -65,9 +74,10 @@ export function AssessmentSettings({
 
       <div>
         <label style={fieldLabel} htmlFor="as-type">Type</label>
-        <select id="as-type" value={kind} disabled={saving} onChange={(e) => setKind(e.target.value as 'activity' | 'quiz' | 'exam')} style={{ ...input, width: 200, cursor: 'pointer' }}>
+        <select id="as-type" value={kind} disabled={saving} onChange={(e) => setKind(e.target.value as AssessmentType)} style={{ ...input, width: 200, cursor: 'pointer' }}>
           <option value="quiz">Quiz</option>
-          <option value="activity">Homework / Activity</option>
+          <option value="homework">Homework</option>
+          <option value="activity">Activity</option>
           <option value="exam">Exam</option>
         </select>
         {typeChanged && (
@@ -75,6 +85,24 @@ export function AssessmentSettings({
             Changing the type changes which weight category this counts in (quiz / papers-HW / exam). Existing submissions are unaffected.
           </p>
         )}
+      </div>
+
+      <div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, fontWeight: 600, cursor: canBeUngraded ? 'pointer' : 'default' }}>
+          <input
+            type="checkbox"
+            checked={effectiveGraded}
+            disabled={saving || !canBeUngraded}
+            onChange={(e) => setGraded(e.target.checked)}
+            style={{ accentColor: 'var(--green)' }}
+          />
+          Counts toward the grade
+        </label>
+        <p className="feu-muted" style={{ fontSize: 12, margin: '4px 0 0' }}>
+          {canBeUngraded
+            ? 'Uncheck for practice work — it still shows a score for feedback but is excluded from the computed marks.'
+            : 'Quizzes and exams always count toward the grade.'}
+        </p>
       </div>
 
       <div>

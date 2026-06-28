@@ -43,4 +43,21 @@ describe('updateAssessmentSettings', () => {
     await setTestUser(`${tag}-i2@x.com`, PW)
     await expect(updateAssessmentSettings({ assessmentId, title: 'Hacked' })).rejects.toThrow(/owner/i)
   })
+
+  it('homework can be marked ungraded; quiz/exam are forced graded', async () => {
+    await setTestUser(`${tag}-i@x.com`, PW)
+    const admin = createAdminClient()
+
+    // homework + ungraded → is_graded false
+    await updateAssessmentSettings({ assessmentId, type: 'homework', isGraded: false })
+    let { data } = await admin.from('assessments').select('type, is_graded').eq('id', assessmentId).single()
+    expect(data!.type).toBe('homework')
+    expect(data!.is_graded).toBe(false)
+
+    // switch to quiz while asking ungraded → forced graded
+    await updateAssessmentSettings({ assessmentId, type: 'quiz', isGraded: false })
+    ;({ data } = await admin.from('assessments').select('type, is_graded').eq('id', assessmentId).single())
+    expect(data!.type).toBe('quiz')
+    expect(data!.is_graded).toBe(true)
+  })
 })

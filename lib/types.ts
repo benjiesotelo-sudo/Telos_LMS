@@ -20,7 +20,7 @@ export interface AnswerKeyItem {
 
 export interface AssessmentImport {
   title: string
-  type: 'activity' | 'quiz' | 'exam'
+  type: AssessmentType
   total_points: number
   questions: Question[]
   answer_key: Record<string, AnswerKeyItem>
@@ -31,7 +31,11 @@ export interface GradedSubmission {
   possible: number // EXCLUDES bonus
 }
 
+/** The three WEIGHT buckets (activity = papers/HW). Do not add to this. */
 export type ComponentType = 'activity' | 'quiz' | 'exam'
+
+/** An assessment's TYPE tag. 'homework' and 'activity' both grade in the activity (papers/HW) bucket. */
+export type AssessmentType = 'quiz' | 'homework' | 'activity' | 'exam'
 
 export interface ComponentWeights {
   activity: number
@@ -116,7 +120,9 @@ export interface SectionAssessmentMeta {
   /** The underlying assessment id — also the key used in SectionStudentRow.cells. */
   assessmentId: string
   title: string
-  type: 'activity' | 'quiz' | 'exam'
+  type: AssessmentType
+  /** False = ungraded (practice) — shown for feedback but excluded from marks. */
+  graded: boolean
   period: 'midterm' | 'final'
   /**
    * The assessment's maximum raw score (assessments.total_points).
@@ -177,8 +183,10 @@ export interface ClassDetailAssessment {
   assignmentId: string
   assessmentId: string
   title: string
-  type: 'activity' | 'quiz' | 'exam'
+  type: AssessmentType
   isManual: boolean
+  /** False = ungraded/practice (doesn't count toward the grade). */
+  graded: boolean
   period: 'midterm' | 'final'
   active: boolean
   revealAnswers: boolean
@@ -222,9 +230,12 @@ export interface StudentTask {
   assignmentId: string
   assessmentId: string
   title: string
-  type: 'activity' | 'quiz' | 'exam'
+  type: AssessmentType
   period: 'midterm' | 'final'
   isManual: boolean
+  /** False = ungraded/practice assessment (doesn't count toward the grade).
+   *  NOTE: distinct from `graded` below, which is whether THIS submission was graded. */
+  isGraded: boolean
   active: boolean
   revealAnswers: boolean
   opensAt: string | null

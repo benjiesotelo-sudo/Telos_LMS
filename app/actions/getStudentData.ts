@@ -69,7 +69,7 @@ async function loadStudentClassData(studentId: string, onlyClassId?: string) {
       .in('id', classIds),
     admin
       .from('assignments')
-      .select('id, class_id, assessment_id, period, active, reveal_answers, opens_at, closes_at, due_date, duration_minutes, assessment:assessment_id(title, type, total_points, is_manual, default_duration_minutes)')
+      .select('id, class_id, assessment_id, period, active, reveal_answers, opens_at, closes_at, due_date, duration_minutes, assessment:assessment_id(title, type, total_points, is_manual, default_duration_minutes, is_graded)')
       .in('class_id', classIds),
   ])
   if (clsErr) throw new Error(`Failed to load classes: ${clsErr.message}`)
@@ -128,6 +128,7 @@ function buildTask(a: any, subMap: Map<string, any>, overrideMap: Map<string, nu
     type,
     period: a.period as 'midterm' | 'final',
     isManual: asmt.is_manual === true,
+    isGraded: asmt.is_graded !== false,
     active: a.active === true,
     revealAnswers: a.reveal_answers === true,
     opensAt: a.opens_at ?? null,
@@ -237,7 +238,8 @@ export async function getStudentGrades(): Promise<StudentGrades> {
       id: a.id,
       assessmentId: a.assessment_id,
       title: a.assessment?.title ?? '',
-      type: (a.assessment?.type ?? 'quiz') as 'activity' | 'quiz' | 'exam',
+      type: (a.assessment?.type ?? 'quiz') as SectionAssessmentMeta['type'],
+      graded: a.assessment?.is_graded !== false,
       period: a.period as 'midterm' | 'final',
       totalPoints: Number(a.assessment?.total_points ?? 0),
     }))

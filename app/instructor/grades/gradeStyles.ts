@@ -16,21 +16,23 @@ export function letterColor(letter: string | null): string {
   return '#c0392b' // F
 }
 
-export function typeTag(t: string): string {
-  return t === 'quiz' ? 'Q' : t === 'activity' ? 'P' : 'E'
-}
+// Type tag/name/order live in the shared module so every surface agrees.
+import { typeTag, typeName, assessmentOrder } from '@/lib/assessmentType'
+export { typeTag, typeName, assessmentOrder }
 
 export function typeBg(t: string): string {
-  return t === 'quiz' ? '#f0f9f4' : t === 'activity' ? '#fffbeb' : '#eef2ff'
-}
-
-export function assessmentOrder(type: string): number {
-  return type === 'quiz' ? 0 : type === 'activity' ? 1 : 2
+  return t === 'quiz'
+    ? '#f0f9f4'
+    : t === 'homework'
+      ? '#f3f0fb'
+      : t === 'activity'
+        ? '#fffbeb'
+        : '#eef2ff' // exam
 }
 
 /** Split + sort assessment columns: midterm/final, each ordered quizzes → papers → exams. */
 export function splitPeriods<
-  T extends { type: 'activity' | 'quiz' | 'exam'; period: 'midterm' | 'final' },
+  T extends { type: string; period: 'midterm' | 'final' },
 >(cols: T[]): { midtermCols: T[]; finalCols: T[] } {
   const sort = (a: T, b: T) => assessmentOrder(a.type) - assessmentOrder(b.type)
   return {

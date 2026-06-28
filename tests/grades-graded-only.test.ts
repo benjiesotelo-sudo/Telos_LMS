@@ -53,3 +53,30 @@ describe('ungraded submissions are excluded', () => {
     expect(cls.cells[assessmentId] ?? null).toBeNull()
   })
 })
+
+describe('ungraded (practice) assessments are excluded from marks', () => {
+  it('an ungraded homework with a graded submission shows a cell but does not move the mark', async () => {
+    const admin = createAdminClient()
+    // One GRADED homework (counts) + one UNGRADED homework (practice), both 100%.
+    const mk = async (graded: boolean) => {
+      const { data: a } = await admin.from('assessments').insert({ instructor_id: instructorId, title: `GO-${graded}-${Math.random()}`, type: 'homework', total_points: 10, questions: [], is_graded: graded }).select('id').single()
+      const asg = await seedAssignment({ assessmentId: a!.id, classId, instructorId })
+      await admin.from('submissions').insert({ assignment_id: asg.id, student_id: studentId, instructor_id: instructorId, answers: {}, earned: 10, possible: 10, score: 100, status: 'graded', graded_at: new Date().toISOString() })
+      return a!.id
+    }
+    const gradedId = await mk(true)
+    const ungradedId = await mk(false)
+
+    await setTestUser(`${tag}-i@x.com`, PW)
+    const g = await getSectionGrades({ classId })
+    const row = g.students.find((s) => s.studentId === studentId)!
+    // Both cells display 100% (feedback)...
+    expect(row.cells[gradedId]).toBe(100)
+    expect(row.cells[ungradedId]).toBe(100)
+    // ...but the Papers/HW mark reflects ONLY the graded one (still 100, not skewed by exclusion logic edge).
+    expect(row.midtermMark).toBe(100)
+    // Sanity: the ungraded assessment is flagged not-graded in the payload.
+    expect(g.assessments.find((a) => a.assessmentId === ungradedId)!.graded).toBe(false)
+    expect(g.assessments.find((a) => a.assessmentId === gradedId)!.graded).toBe(true)
+  })
+})
