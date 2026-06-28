@@ -206,6 +206,10 @@ export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
   const thStyle: React.CSSProperties = { textAlign: 'left', padding: '6px 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray, #666)', borderBottom: '2px solid var(--line, #ddd)' }
   const tdStyle: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--line, #eee)', verticalAlign: 'middle' }
   const btnSm: React.CSSProperties = { fontSize: 12, padding: '4px 10px', borderRadius: 5, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.2 }
+  // Pin the Actions column to the right edge so Edit/Reset/Delete are ALWAYS visible,
+  // no horizontal scrolling (or scrolling past 500 rows) needed to reach them.
+  const stickyActionsTh: React.CSSProperties = { ...thStyle, textAlign: 'right', position: 'sticky', right: 0, background: '#fff', zIndex: 2, boxShadow: '-8px 0 8px -8px rgba(0,0,0,0.18)' }
+  const stickyActionsTd: React.CSSProperties = { ...tdStyle, textAlign: 'right', position: 'sticky', right: 0, background: '#fff', zIndex: 1, boxShadow: '-8px 0 8px -8px rgba(0,0,0,0.18)' }
 
   return (
     <section aria-labelledby="users-h" className="feu-card" style={{ marginTop: 24 }}>
@@ -232,7 +236,7 @@ export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
                 <th style={thStyle}>Role</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Student #</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
+                <th style={stickyActionsTh}>Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -243,7 +247,7 @@ export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
                   <td style={tdStyle}>{roleBadge(row.role)}</td>
                   <td style={tdStyle}>{statusBadge(row.status)}</td>
                   <td style={tdStyle}>{row.studentNumber ?? <span className="feu-muted">—</span>}</td>
-                  <td style={{ ...tdStyle, textAlign: 'right' }}>
+                  <td style={stickyActionsTd}>
                     <span style={{ display: 'inline-flex', gap: 6, whiteSpace: 'nowrap' }}>
                       <button type="button" className="feu-btn-green" style={btnSm} onClick={() => setModal({ kind: 'edit', row })}>Edit</button>
                       <button type="button" className="feu-btn-gold" style={btnSm} onClick={() => { setModal({ kind: 'reset', id: row.id, fullName: row.fullName }) }}>Reset PW</button>
