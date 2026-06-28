@@ -9,6 +9,49 @@ export interface AttemptTimer {
   deadline: string | null
 }
 
+export interface AttemptStatus {
+  timed: boolean
+  durationMinutes: number | null
+  /** True if the student has already started this attempt (resume case). */
+  started: boolean
+  /** Deadline when started; otherwise null. */
+  deadline: string | null
+}
+
+/** Read-only: does this student have a timed attempt, and has it started yet?
+ *  Does NOT record a start (that's startAttempt). Used to render the pre-quiz screen. */
+export async function getAttemptStatus(input: { assignmentId: string }): Promise<AttemptStatus> {
+  const supabase = await createClient()
+  const { data: auth, error: authErr } = await supabase.auth.getUser()
+  if (authErr || !auth.user) throw new Error('Not authenticated')
+  const studentId = auth.user.id
+
+  const admin = createAdminClient()
+  const { data: asg, error: asgErr } = await admin
+    .from('assignments')
+    .select('id, class_id, duration_minutes, closes_at, assessment:assessment_id(default_duration_minutes)')
+    .eq('id', input.assignmentId)
+    .single()
+  if (asgErr || !asg) throw new Error('Assignment not found')
+
+  const defaultDuration = ((asg as any).assessment?.default_duration_minutes ?? null) as number | null
+  const eff = (asg.duration_minutes ?? defaultDuration) as number | null
+  if (eff == null) return { timed: false, durationMinutes: null, started: false, deadline: null }
+
+  const { data: att } = await admin
+    .from('quiz_attempts')
+    .select('started_at')
+    .eq('assignment_id', input.assignmentId)
+    .eq('student_id', studentId)
+    .maybeSingle()
+
+  if (!att) return { timed: true, durationMinutes: eff, started: false, deadline: null }
+
+  let deadlineMs = new Date(att.started_at).getTime() + eff * 60_000
+  if (asg.closes_at) deadlineMs = Math.min(deadlineMs, new Date(asg.closes_at).getTime())
+  return { timed: true, durationMinutes: eff, started: true, deadline: new Date(deadlineMs).toISOString() }
+}
+
 /**
  * Records (once) when the student first opens a timed assignment and returns the
  * countdown deadline. The start time is set only on the first call — reopening

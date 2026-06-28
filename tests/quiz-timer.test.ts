@@ -3,7 +3,7 @@ import { describe, it, expect, beforeAll } from 'vitest'
 import { createAdminClient } from '@/lib/supabase/server'
 import { createUser, seedCourse, seedClass, seedAssignment, seedEnrollment } from '@/tests/helpers/fixtures'
 import { setTestUser } from '@/tests/helpers/auth'
-import { startAttempt } from '@/app/actions/startAttempt'
+import { startAttempt, getAttemptStatus } from '@/app/actions/startAttempt'
 import { setAssessmentDuration } from '@/app/actions/setAssessmentDuration'
 
 const PW = 'Timer_pw_123!'
@@ -80,6 +80,36 @@ describe('startAttempt', () => {
     void outsider
     await setTestUser(`${tag}-out@x.com`, PW)
     await expect(startAttempt({ assignmentId: timedAsgId })).rejects.toThrow()
+  })
+})
+
+describe('getAttemptStatus (read-only, for the pre-quiz screen)', () => {
+  it('untimed assignment → timed=false', async () => {
+    await setTestUser(`${tag}-s@x.com`, PW)
+    const s = await getAttemptStatus({ assignmentId: untimedAsgId })
+    expect(s.timed).toBe(false)
+    expect(s.started).toBe(false)
+  })
+
+  it('timed assignment: not started before startAttempt, started after (does not itself record a start)', async () => {
+    const admin = createAdminClient()
+    const fresh = await seedAssignment({ assessmentId: durAssessmentId, classId, instructorId })
+    void admin
+
+    await setTestUser(`${tag}-s@x.com`, PW)
+    const before = await getAttemptStatus({ assignmentId: fresh.id })
+    expect(before.timed).toBe(true)
+    expect(before.started).toBe(false)
+    expect(before.deadline).toBeNull()
+
+    // peeking again must NOT have started it
+    const stillBefore = await getAttemptStatus({ assignmentId: fresh.id })
+    expect(stillBefore.started).toBe(false)
+
+    await startAttempt({ assignmentId: fresh.id })
+    const after = await getAttemptStatus({ assignmentId: fresh.id })
+    expect(after.started).toBe(true)
+    expect(after.deadline).not.toBeNull()
   })
 })
 
