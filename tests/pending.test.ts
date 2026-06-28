@@ -87,4 +87,23 @@ describe('listPending', () => {
     expect(placedRows.every((r) => r.className !== null)).toBe(true)
     expect(placedRows.some((r) => r.className === null)).toBe(false)
   })
+
+  it('approving an unplaced registrant WITH a chosen section enrolls + activates them', async () => {
+    const { approvePending } = await import('@/app/actions/approvePending')
+    const instrD = await createUser({ role: 'instructor', email: `${tag}-id@x.com`, password: PW, fullName: 'InstrD' })
+    const courseId = (await seedCourse({ instructorId: instrD.id, code: `${tag}-DD`, title: 'Course D' })).id
+    const classId = (await seedClass({ instructorId: instrD.id, courseId, period: 'Midyear', sectionLabel: 'D1' })).id
+    const admin = createAdminClient()
+
+    const stu = await createUser({ role: 'student', email: `${tag}-sd@x.com`, password: PW, fullName: 'StudentD', studentNumber: 'SND-001' })
+    await admin.from('profiles').update({ status: 'pending' }).eq('id', stu.id) // unplaced: no enrollment
+
+    await setTestUser(instrD.email, PW)
+    await approvePending({ studentId: stu.id, classId }) // section-picker passes classId
+
+    const { data: prof } = await admin.from('profiles').select('status').eq('id', stu.id).single()
+    expect(prof!.status).toBe('active')
+    const { data: enr } = await admin.from('enrollments').select('status').eq('student_id', stu.id).eq('class_id', classId).single()
+    expect(enr!.status).toBe('active')
+  })
 })
