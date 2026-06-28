@@ -180,7 +180,7 @@ Single source of truth for what's left to build. Order reflects "student experie
 - ✅ `middleware` → `proxy` rename (Next 16 convention).
 - ✅ Student pages added to the e2e smoke (16/16: 12 instructor + 4 student).
 - Obsolete (no longer applies): "instructor enroll/assign defaults to first course" (enrollment lists all classes, assign is class-scoped); "student-dashboard N+1" (replaced by getStudentOverview batched queries).
-- Verification: **276 unit tests green**, `npm run build` clean, e2e smoke 16/16. ⚠️ Cloud still at 0010 — `supabase db push` of 0011–0017 required before/after merge.
+- Verification: **279 unit tests green**, `npm run build` clean, e2e smoke 16/16 (12 instructor + 4 student). Plus an **adversarial multi-agent branch review** (4 dimensions → verify): 5 confirmed findings all fixed — getSectionGrades now counts only GRADED submissions (was asymmetric with getStudentData); InvitesPanel/ReviewButtons clear busy state on success (no frozen buttons); inviteToClass validates target is a student; getDraft enforces the enrollment guard. ⚠️ Cloud still at 0010 — `supabase db push` of 0011–0017 required before/after merge.
 
 ### Cloud/ops (run in Supabase dashboard — Benjie's hands, not code)
 - Schedule `purge_expired_pending()` via pg_cron.
