@@ -151,7 +151,7 @@ Autonomous build per the agreed design. **264 tests green** (was 239; +25), **`n
 - **Gradebook CSV export**: "Export CSV" on the Grade Sheet downloads the per-section computed sheet.
 
 ### ⚠️ BEFORE MERGING this branch to main
-- It adds **migrations 0011, 0012, 0013** — cloud DB is still at 0010. After merge you MUST `supabase db push` (link to `dprrunxkmsavqmbuzkwf`) so production gets the new columns/tables, else the live app errors. (Local test DB already has them.)
+- It adds **migrations 0011–0019** — cloud DB is still at 0010. After merge you MUST `supabase db push` (link to `dprrunxkmsavqmbuzkwf`) so production gets the new columns/tables/enum value, else the live app errors. (Local test DB already has them.)
 - Branch is **not pushed** and **not merged** — it's local for your morning review.
 
 ### Morning review — run it locally
@@ -183,7 +183,16 @@ Single source of truth for what's left to build. Order reflects "student experie
 ### UI refinements (2026-06-29, from user review — same branch)
 After reviewing, the user asked for: (1) **Assessment Settings** — edit name / type / **default timer** on the assessment page (`updateAssessmentSettings`); (2) **timer adjustable when assigning** — a Time-limit field on the per-section assignment controls + at assign time; (3) **"Removals" → "Admin Controls"** — a hub with **Users + Removal requests** as tabs (`/instructor/admin`; old routes redirect); (4) **Student Dashboard = To-Do + Done** (dated; To-Do by deadline, Done by submit date/time; standalone `/student/todo` removed); (5) **Student Classes** list page (pick a class → contents). Student nav: Dashboard / Classes / Grades / Profile. A 2nd adversarial review found 4 issues — all fixed (getStudentDone excludes manual; submitted tasks never show a deadline; assignment-duration save no-ops when unchanged; assessment-settings errors render red).
 
-- Verification: **285 unit tests green**, `npm run build` clean, e2e smoke 16/16 (12 instructor + 4 student). Plus TWO **adversarial multi-agent branch reviews** (4-dimension → verify) (4 dimensions → verify): 5 confirmed findings all fixed — getSectionGrades now counts only GRADED submissions (was asymmetric with getStudentData); InvitesPanel/ReviewButtons clear busy state on success (no frozen buttons); inviteToClass validates target is a student; getDraft enforces the enrollment guard. ⚠️ Cloud still at 0010 — `supabase db push` of 0011–0017 required before/after merge.
+### Taxonomy + graded + UX round (2026-06-29, from user review — same branch)
+- **Assessment types are now four tags** (Quiz [Q] · Homework [H] · Activity [P] · Exam [E], via `lib/assessmentType`). Homework + Activity both grade in the **Papers/HW 20%** bucket (migration 0018 adds the `homework` enum value). Mismatched labels ("Paper/Activity" vs "Homework/Activity") fixed everywhere.
+- **Graded/ungraded toggle** (migration 0018 `assessments.is_graded`, default true): homework/activity can be marked **practice (ungraded)** — still shows a score for feedback but is **excluded from MG/FG/course marks** (computeStudentMarks + getSectionGrades + getStudentData + editor preview all honor it). Quiz/exam are **always graded** (enforced server-side). Ungraded marker shown in the grade sheet + student lists.
+- **Assessment Settings** card edits **name / type / default timer / graded** (`updateAssessmentSettings`); per-section **time-limit** field on assignment controls + at assign time.
+- **Admin Controls** hub (`/instructor/admin`) = Users + Removal-requests tabs (old routes redirect). **Sticky sidebar**; compact Users action buttons.
+- **Pending registrations** split into **Needs a section / Joined a section** with a clean row format + an **optional join reason** (migration 0019 `profiles.join_reason`, captured at registration, cleared on approval).
+- **Student Dashboard** = **To-Do | Done tabs** (Google-Classroom style).
+- Verification: **289 unit tests green**, `npm run build` clean, e2e smoke 16/16. **THREE adversarial multi-agent reviews** total (each: 4 dimensions → verify): all confirmed findings fixed (graded-only submissions; no frozen invite/removal buttons; invite-target must be a student; getDraft enrollment guard; consistent `homework` casts/labels). ⚠️ Cloud still at 0010 — `supabase db push` of migrations **0011–0019** required before/after merge.
+
+#### (prior round) UI refinements: 285 tests, 2 reviews — superseded by the line above.
 
 ### Cloud/ops (run in Supabase dashboard — Benjie's hands, not code)
 - Schedule `purge_expired_pending()` via pg_cron.
