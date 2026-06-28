@@ -2,6 +2,23 @@
 
 Multi-instructor learning-management system (the "Telos" brand). This is the at-a-glance handoff so any new session picks up fast.
 
+## ▶▶ NEXT SESSION — RESUME HERE (set 2026-06-29)
+**Where we are:** Theme D + hardening + 4-type taxonomy/graded toggle + all UX rounds are **BUILT, TESTED (289), REVIEWED (3×), and SHIPPED to production** (cloud migrated to 0019; `main` @ `db791b0`; Vercel live at https://telos-lms.vercel.app). **No code/features are pending** — the whole build agenda is done.
+
+**Tomorrow's agenda (all NON-code — your hands / your call):**
+1. **Live spot-check** — log into https://telos-lms.vercel.app as **yourself + a student** on real data; confirm the new UI (Assessment Settings, Admin Controls, student Dashboard tabs, Grades). If anything's off → tell Claude to fix-and-redeploy.
+2. **Supabase SQL ops** (run in the cloud SQL Editor — Benjie's hands):
+   - Schedule `select public.purge_expired_pending();` via **pg_cron** (purge >7-day stale pending).
+   - Add a **unique index on `profiles.student_number`**.
+   - **`handle_new_user` trigger**: keep public signups OFF or force `role=student` **before opening self-registration** (it still trusts metadata `role`).
+   - Save admin SQL snippets: `List Users`, `Clean Test Data`, `Health Check`, `1st Setup`.
+3. **Decision** (owner: Benjie): should `projects/Telos_AMS0011` graduate to its own repo? (Tracked in AIS-OS `decisions/log.md`.)
+4. **Branch cleanup:** once the live spot-check passes, delete `feat/theme-d-student` (kept now as a safety net; already merged to main).
+5. **Test data:** when done testing, run the scoped smoke-data cleanup SQL (in the "Test data" section below) — safe, cannot touch Mamoun/Benjie/AMS0011.
+
+**How to deploy in future** (proven this session): `supabase db push --linked --yes` (migrate cloud FIRST) → `git push origin main` (Vercel deploys). Migrations are additive; always migrate before pushing code.
+
+
 ## Status (2026-06-26): Slice 1 LIVE + Theme B built on `feat/theme-b-classes-roster` (awaiting merge)
 - **Deployed:** https://telos-lms.vercel.app  (Vercel — auto-deploys on push to `main`).
 - **Backend:** Supabase cloud project `dprrunxkmsavqmbuzkwf`.  (NEVER touch the old `SOTELO_GradeBook` project `lvcdlulyvwbjrwvkmfwt`.)
