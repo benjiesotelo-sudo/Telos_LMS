@@ -150,12 +150,12 @@ Autonomous build per the agreed design. **264 tests green** (was 239; +25), **`n
 - **Removal requests** (migration 0013): instructor "Request removal" (reason) on the class roster → **admin** reviews at **`/instructor/removals`** → Approve (deletes enrollment) / Reject. Instructor sees "Removal pending".
 - **Gradebook CSV export**: "Export CSV" on the Grade Sheet downloads the per-section computed sheet.
 
-### SHIP STATUS (2026-06-29): MERGED to local `main` (commit 269e4eb), NOT pushed — deploy tomorrow
-The branch is merged into local `main` (37 commits ahead of origin/main) and verified green (289 tests, build clean), but **deliberately NOT pushed** — pushing deploys via Vercel, and the code needs migrations 0011–0019 which aren't on cloud yet (still 0010). **Tomorrow, in THIS order** (migrate first so there's never code-ahead-of-schema):
-1. `supabase link --project-ref dprrunxkmsavqmbuzkwf` (if needed) → `supabase db push`  (applies 0011–0019 to cloud; additive, safe for the currently-live app)
-2. `git push origin main`  → Vercel auto-deploys the new code
-3. Spot-check https://telos-lms.vercel.app (instructor + a student), then delete `feat/theme-d-student`.
-(`feat/theme-d-student` is retained until the deploy is confirmed.)
+### ✅ SHIPPED to production (2026-06-29) — commit `8d081f2` on `main`
+Theme D + hardening + taxonomy/graded + all UX rounds are LIVE.
+- **Cloud DB migrated to 0019** via `supabase db push --linked` (0011–0019 applied; verified each new object exists on cloud: `assessments.is_graded`, `quiz_attempts`/`answers`/`started_at`, `enrollment_removal_requests`, `profiles.join_reason`, `assignments.duration_minutes`). The `homework` enum value + RLS/trigger/RPC all applied. (A post-apply pgdelta "catalog cache" warning appeared — cosmetic, migrations applied fine.)
+- **Code pushed** `4c2c9a5..8d081f2` → Vercel auto-deploy. Production health check: `/`, `/login`, `/register/x` → 200.
+- **Order honored:** migrate-first, then push — no code-ahead-of-schema window.
+- ⏳ **Benjie's spot-check pending:** log in at https://telos-lms.vercel.app as yourself (and as a student) to confirm the new UI on real data. Then `feat/theme-d-student` can be deleted (kept for now).
 
 ### ⚠️ Original note — BEFORE MERGING this branch to main
 - It adds **migrations 0011–0019** — cloud DB is still at 0010. After merge you MUST `supabase db push` (link to `dprrunxkmsavqmbuzkwf`) so production gets the new columns/tables/enum value, else the live app errors. (Local test DB already has them.)
