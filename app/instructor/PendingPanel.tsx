@@ -6,6 +6,9 @@ import type { PendingRow } from '@/lib/types'
 
 interface ClassOption { id: string; displayName: string }
 
+const fieldLabel: React.CSSProperties = { color: 'var(--gray)', fontSize: 12, textTransform: 'uppercase', letterSpacing: '0.3px', fontWeight: 600, paddingTop: 1 }
+const fieldValue: React.CSSProperties = { margin: 0, color: 'var(--ink)', wordBreak: 'break-word' }
+
 export function PendingPanel({ rows, classes }: { rows: PendingRow[]; classes: ClassOption[] }) {
   const [done, setDone] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<Record<string, string>>({})
@@ -26,18 +29,26 @@ export function PendingPanel({ rows, classes }: { rows: PendingRow[]; classes: C
     const chosen = pickedClass[r.studentId] ?? ''
     const approveDisabled = unplaced && chosen === ''
     return (
-      <div style={{ padding: '10px 0', borderBottom: '1px solid var(--line, #eee)' }}>
+      <div style={{ padding: '12px 14px', border: '1px solid var(--border)', borderRadius: 8, marginBottom: 8, background: '#fff' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ fontWeight: 600 }}>{r.fullName || <span className="feu-muted">(no name)</span>}</div>
-            <div className="feu-muted" style={{ fontSize: 12 }}>
-              {r.studentNumber || '—'} · {r.email}{r.className ? ` · ${r.className}` : ''}
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <div style={{ fontWeight: 700, fontSize: 15, color: 'var(--ink)', marginBottom: 6 }}>
+              {r.fullName || <span className="feu-muted">(no name)</span>}
             </div>
-            {r.reason && (
-              <div style={{ fontSize: 12, marginTop: 4, color: 'var(--ink)' }}>
-                <span className="feu-muted">Reason:</span> {r.reason}
-              </div>
-            )}
+            <dl style={{ display: 'grid', gridTemplateColumns: 'max-content 1fr', gap: '3px 10px', margin: 0, fontSize: 13 }}>
+              <dt style={fieldLabel}>Student #</dt>
+              <dd style={fieldValue}>{r.studentNumber || '—'}</dd>
+              <dt style={fieldLabel}>Email</dt>
+              <dd style={fieldValue}>{r.email}</dd>
+              <dt style={fieldLabel}>Section</dt>
+              <dd style={fieldValue}>{r.className ?? <span className="feu-muted">unassigned</span>}</dd>
+              {r.reason && (
+                <>
+                  <dt style={fieldLabel}>Reason</dt>
+                  <dd style={fieldValue}>{r.reason}</dd>
+                </>
+              )}
+            </dl>
           </div>
           {done[r.studentId]
             ? <span className="feu-muted">{done[r.studentId]}</span>
