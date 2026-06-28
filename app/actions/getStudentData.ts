@@ -80,7 +80,7 @@ async function loadStudentClassData(studentId: string, onlyClassId?: string) {
   // 4. The student's submissions + 5. grade overrides — concurrent
   const [{ data: subs, error: subErr }, { data: overrides, error: ovErr }] = await Promise.all([
     assignmentIds.length
-      ? admin.from('submissions').select('id, assignment_id, earned, possible, status').eq('student_id', studentId).in('assignment_id', assignmentIds)
+      ? admin.from('submissions').select('id, assignment_id, earned, possible, status, graded_at, created_at').eq('student_id', studentId).in('assignment_id', assignmentIds)
       : Promise.resolve({ data: [], error: null } as any),
     admin.from('grade_overrides').select('assessment_id, class_id, score').eq('student_id', studentId).in('class_id', classIds),
   ])
@@ -88,13 +88,14 @@ async function loadStudentClassData(studentId: string, onlyClassId?: string) {
   if (ovErr) throw new Error(`Failed to load grade overrides: ${ovErr.message}`)
 
   // submission keyed by assignment_id
-  const subMap = new Map<string, { id: string; earned: number; possible: number; status: string }>()
+  const subMap = new Map<string, { id: string; earned: number; possible: number; status: string; submittedAt: string | null }>()
   for (const s of subs ?? []) {
     subMap.set(s.assignment_id as string, {
       id: s.id as string,
       earned: Number(s.earned),
       possible: Number(s.possible),
       status: s.status as string,
+      submittedAt: (s.graded_at ?? s.created_at ?? null) as string | null,
     })
   }
   // override keyed by `${classId}:${assessmentId}`
@@ -137,6 +138,7 @@ function buildTask(a: any, subMap: Map<string, any>, overrideMap: Map<string, nu
     submitted: sub != null,
     graded,
     scorePct,
+    submittedAt: sub?.submittedAt ?? null,
     canReview: revealable(type, a.reveal_answers === true, a.closes_at ?? null, graded),
   }
 }
@@ -203,6 +205,25 @@ export async function getStudentTodo(): Promise<(StudentTask & { classId: string
     return d ? new Date(d).getTime() : Number.MAX_SAFE_INTEGER
   }
   return items.sort((a, b) => sortKey(a) - sortKey(b))
+}
+
+/**
+ * Flat DONE list: online submissions across classes, newest-accomplished first.
+ * (Manual/offline items have no submission timestamp — they show only on Grades.)
+ */
+export async function getStudentDone(): Promise<(StudentTask & { classId: string; classLabel: string })[]> {
+  const studentId = await authedStudentId()
+  const { classes, assignments, subMap, overrideMap } = await loadStudentClassData(studentId)
+  const items: (StudentTask & { classId: string; classLabel: string })[] = []
+  for (const cls of assembleClasses(classes, assignments, subMap, overrideMap)) {
+    for (const t of cls.tasks) {
+      if (!t.submitted) continue
+      items.push({ ...t, classId: cls.classId, classLabel: `${cls.code} - ${cls.sectionLabel}` })
+    }
+  }
+  // Newest accomplishment first; null timestamps sort last.
+  const ts = (t: StudentTask) => (t.submittedAt ? new Date(t.submittedAt).getTime() : 0)
+  return items.sort((a, b) => ts(b) - ts(a))
 }
 
 /** Read-only FEU grade breakdown for the student, per class. */

@@ -67,13 +67,17 @@ function Action({ task }: { task: StudentTask }) {
   )
 }
 
-/** Renders a flat list of task rows. */
-export function TaskList({ tasks }: { tasks: StudentTask[] }) {
+/** Renders a flat list of task rows. Items may carry a classLabel (cross-class lists). */
+export function TaskList({ tasks }: { tasks: (StudentTask & { classLabel?: string })[] }) {
   if (tasks.length === 0) return <p className="feu-muted">Nothing here yet.</p>
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {tasks.map((t) => {
         const due = fmtDate(t.closesAt ?? t.dueDate)
+        const metaParts: string[] = []
+        if (t.classLabel) metaParts.push(t.classLabel)
+        if (t.submitted && t.submittedAt) metaParts.push(`Submitted ${fmtDate(t.submittedAt)}`)
+        else if (due) metaParts.push(`${t.closesAt ? 'Closes' : 'Due'} ${due}`)
         return (
           <div
             key={t.assignmentId}
@@ -90,10 +94,8 @@ export function TaskList({ tasks }: { tasks: StudentTask[] }) {
             <span style={typeBadge(t.type)}>{typeLabel(t.type)}</span>
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontWeight: 600, color: 'var(--ink)' }}>{t.title}</div>
-              {due && (
-                <div className="feu-muted" style={{ fontSize: 12 }}>
-                  {t.closesAt ? 'Closes' : 'Due'} {due}
-                </div>
+              {metaParts.length > 0 && (
+                <div className="feu-muted" style={{ fontSize: 12 }}>{metaParts.join(' · ')}</div>
               )}
             </div>
             <StatusPill task={t} />

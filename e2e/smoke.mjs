@@ -95,7 +95,7 @@ await checkRoutes(page, ROUTES)
 const STUDENT_EMAIL = 'e2e-student@local.test'
 const STUDENT_ROUTES = [
   ['/student', 'Student Dashboard'],
-  ['/student/todo', 'Student To-Do'],
+  ['/student/classes', 'Student Classes list'],
   ['/student/grades', 'Student Grades'],
   [`/student/classes/${CLASS_ID}`, 'Student class detail'],
 ]

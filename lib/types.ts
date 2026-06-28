@@ -238,6 +238,8 @@ export interface StudentTask {
   graded: boolean
   /** Earned percentage when graded (else null). */
   scorePct: number | null
+  /** When the student submitted (graded_at, else created_at); null if not submitted. */
+  submittedAt: string | null
   /** True when answers are revealable to the student right now (gate satisfied). */
   canReview: boolean
 }

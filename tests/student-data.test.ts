@@ -6,6 +6,7 @@ import { setTestUser } from '@/tests/helpers/auth'
 import {
   getStudentOverview,
   getStudentTodo,
+  getStudentDone,
   getStudentGrades,
   getStudentClassDetail,
 } from '@/app/actions/getStudentData'
@@ -82,6 +83,19 @@ describe('getStudentTodo', () => {
     expect(ids).toContain(hwAsgId)
     expect(ids).not.toContain(quizAsgId) // already submitted
     expect(todo[0].classLabel).toMatch(new RegExp(tag))
+  })
+})
+
+describe('getStudentDone', () => {
+  it('lists the submitted quiz (with a submit timestamp), not the un-submitted homework', async () => {
+    await setTestUser(`${tag}-stu@x.com`, PW)
+    const done = await getStudentDone()
+    const ids = done.map((t) => t.assignmentId)
+    expect(ids).toContain(quizAsgId)
+    expect(ids).not.toContain(hwAsgId)
+    const quiz = done.find((t) => t.assignmentId === quizAsgId)!
+    expect(quiz.submittedAt).not.toBeNull()
+    expect(quiz.classLabel).toMatch(new RegExp(tag))
   })
 })
 
