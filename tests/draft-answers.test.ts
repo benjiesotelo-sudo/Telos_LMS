@@ -40,8 +40,9 @@ describe('saveDraft / getDraft', () => {
     expect(await getDraft({ assignmentId })).toEqual({ q1: '7' })
   })
 
-  it('a non-enrolled student cannot save a draft', async () => {
+  it('a non-enrolled student cannot save OR read a draft', async () => {
     await setTestUser(`${tag}-out@x.com`, PW)
     await expect(saveDraft({ assignmentId, answers: { q1: 'x' } })).rejects.toThrow(/not enrolled/i)
+    await expect(getDraft({ assignmentId })).rejects.toThrow(/not enrolled/i)
   })
 })

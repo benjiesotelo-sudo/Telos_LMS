@@ -15,6 +15,7 @@ export function ReviewButtons({ requestId }: { requestId: string }) {
       else await rejectRemoval({ requestId })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Action failed.')
+    } finally {
       setBusy(null)
     }
   }

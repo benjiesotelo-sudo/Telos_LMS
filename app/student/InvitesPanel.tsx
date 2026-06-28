@@ -17,6 +17,7 @@ export function InvitesPanel({ invites }: { invites: ClassInvite[] }) {
       else await declineInvite({ classId })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Action failed.')
+    } finally {
       setBusy(null)
     }
   }

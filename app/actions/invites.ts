@@ -63,6 +63,12 @@ export async function inviteToClass(input: { classId: string; studentId: string 
   const admin = createAdminClient()
   await assertOwnsClass(admin, input.classId, caller.id, caller.role === 'admin')
 
+  // Target must be a student account (the UI search already filters, but the
+  // action must not trust the client — don't let instructors/admins be "invited").
+  const { data: target } = await admin.from('profiles').select('role').eq('id', input.studentId).single()
+  if (!target) throw new Error('User not found')
+  if (target.role !== 'student') throw new Error('Only students can be invited to a class')
+
   const { data: existing } = await admin
     .from('enrollments')
     .select('id, status')

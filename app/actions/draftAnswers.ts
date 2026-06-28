@@ -57,6 +57,7 @@ export async function saveDraft(input: {
 export async function getDraft(input: { assignmentId: string }): Promise<Record<string, string>> {
   const studentId = await authedStudent()
   const admin = createAdminClient()
+  await assertEnrolledInAssignment(admin, input.assignmentId, studentId)
   const { data } = await admin
     .from('quiz_attempts')
     .select('answers')

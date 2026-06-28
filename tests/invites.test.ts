@@ -80,4 +80,10 @@ describe('authorization', () => {
     await setTestUser(`${tag}-i2@x.com`, PW)
     await expect(inviteToClass({ classId, studentId: studentB })).rejects.toThrow(/owner/i)
   })
+
+  it('cannot invite a non-student (e.g. an instructor) even by direct call', async () => {
+    const victim = await createUser({ role: 'instructor', email: `${tag}-victim@x.com`, password: PW, fullName: 'Victim Instr' })
+    await setTestUser(`${tag}-i@x.com`, PW)
+    await expect(inviteToClass({ classId, studentId: victim.id })).rejects.toThrow(/only students/i)
+  })
 })
