@@ -205,6 +205,7 @@ export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
 
   const thStyle: React.CSSProperties = { textAlign: 'left', padding: '6px 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray, #666)', borderBottom: '2px solid var(--line, #ddd)' }
   const tdStyle: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--line, #eee)', verticalAlign: 'middle' }
+  const btnSm: React.CSSProperties = { fontSize: 12, padding: '4px 10px', borderRadius: 5, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.2 }
 
   return (
     <section aria-labelledby="users-h" className="feu-card" style={{ marginTop: 24 }}>
@@ -238,15 +239,15 @@ export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td style={tdStyle}>{row.fullName || <span className="feu-muted">—</span>}</td>
-                  <td style={tdStyle}>{row.email}</td>
+                  <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.email}>{row.email}</td>
                   <td style={tdStyle}>{roleBadge(row.role)}</td>
                   <td style={tdStyle}>{statusBadge(row.status)}</td>
                   <td style={tdStyle}>{row.studentNumber ?? <span className="feu-muted">—</span>}</td>
                   <td style={{ ...tdStyle, textAlign: 'right' }}>
-                    <span style={{ display: 'inline-flex', gap: 4 }}>
-                      <button type="button" className="feu-btn-green" style={{ fontSize: 12, padding: '3px 8px' }} onClick={() => setModal({ kind: 'edit', row })}>Edit</button>
-                      <button type="button" className="feu-btn-gold" style={{ fontSize: 12, padding: '3px 8px' }} onClick={() => { setModal({ kind: 'reset', id: row.id, fullName: row.fullName }) }}>Reset pw</button>
-                      <button type="button" style={{ fontSize: 12, padding: '3px 8px', background: 'var(--red, #c0392b)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }} onClick={() => setModal({ kind: 'delete', id: row.id, fullName: row.fullName })}>Delete</button>
+                    <span style={{ display: 'inline-flex', gap: 6, whiteSpace: 'nowrap' }}>
+                      <button type="button" className="feu-btn-green" style={btnSm} onClick={() => setModal({ kind: 'edit', row })}>Edit</button>
+                      <button type="button" className="feu-btn-gold" style={btnSm} onClick={() => { setModal({ kind: 'reset', id: row.id, fullName: row.fullName }) }}>Reset PW</button>
+                      <button type="button" style={{ ...btnSm, background: 'var(--red, #c0392b)', color: '#fff', border: 'none' }} onClick={() => setModal({ kind: 'delete', id: row.id, fullName: row.fullName })}>Delete</button>
                     </span>
                   </td>
                 </tr>
