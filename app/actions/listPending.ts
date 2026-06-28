@@ -29,6 +29,7 @@ export async function listPending(): Promise<PendingRow[]> {
         full_name,
         email,
         student_number,
+        join_reason,
         enrollments!student_id (
           status,
           classes:class_id (
@@ -55,6 +56,7 @@ export async function listPending(): Promise<PendingRow[]> {
         email: p.email,
         studentNumber: p.student_number ?? '',
         className,
+        reason: p.join_reason ?? null,
       }
     })
   }
@@ -86,7 +88,8 @@ export async function listPending(): Promise<PendingRow[]> {
           full_name,
           email,
           student_number,
-          status
+          status,
+          join_reason
         )
       `)
       .in('class_id', myClassIds)
@@ -103,6 +106,7 @@ export async function listPending(): Promise<PendingRow[]> {
         email: prof.email,
         studentNumber: prof.student_number ?? '',
         className: classMap[enr.class_id] ?? null,
+        reason: prof.join_reason ?? null,
       })
     }
   }
@@ -117,7 +121,7 @@ export async function listPending(): Promise<PendingRow[]> {
   const enrolledIds = new Set((allEnrStudents ?? []).map((e: any) => e.student_id))
   const { data: allPending, error: upErr } = await admin
     .from('profiles')
-    .select('id, full_name, email, student_number')
+    .select('id, full_name, email, student_number, join_reason')
     .eq('status', 'pending')
     .eq('role', 'student')
   if (upErr) throw new Error(upErr.message)
@@ -129,6 +133,7 @@ export async function listPending(): Promise<PendingRow[]> {
         email: p.email,
         studentNumber: p.student_number ?? '',
         className: null,
+        reason: p.join_reason ?? null,
       })
     }
   }

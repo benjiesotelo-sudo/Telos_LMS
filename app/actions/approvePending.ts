@@ -17,7 +17,7 @@ export async function approvePending(input: { studentId: string; classId?: strin
     if (clsErr || !cls) throw new Error('Class not found')
     if (!isAdmin && cls.instructor_id !== userId) throw new Error('Not your class')
   }
-  const { error: actErr } = await admin.from('profiles').update({ status: 'active' }).eq('id', input.studentId)
+  const { error: actErr } = await admin.from('profiles').update({ status: 'active', join_reason: null }).eq('id', input.studentId)
   if (actErr) throw new Error(`Could not activate the account: ${actErr.message}`)
   if (input.classId) {
     const { error: upErr } = await admin.from('enrollments').upsert(

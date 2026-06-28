@@ -37,6 +37,15 @@ describe('registerViaLink', () => {
     expect(enr?.class_id).toBe(classId)
   })
 
+  it('stores an optional join reason that surfaces in the pending list', async () => {
+    const { token } = await instructorWithClassLink()
+    const email = `${tag}-reason@x.com`
+    await registerViaLink({ token, firstName: 'Rea', lastName: 'Son', email, password: PW, studentNumber: 'SN-REASON', reason: 'Transferred from section 2B' })
+    const admin = createAdminClient()
+    const { data: prof } = await admin.from('profiles').select('join_reason').eq('email', email).single()
+    expect(prof?.join_reason).toBe('Transferred from section 2B')
+  })
+
   it('stores all name parts and composes full_name with prefix and suffix', async () => {
     const { token } = await instructorWithClassLink()
     const email = `${tag}-named@x.com`

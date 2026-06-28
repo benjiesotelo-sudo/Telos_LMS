@@ -79,6 +79,8 @@ export interface PendingRow {
   email: string
   studentNumber: string
   className: string | null
+  /** Optional reason the student gave for joining (shown to the approver). */
+  reason: string | null
 }
 
 export interface AdminUserRow {

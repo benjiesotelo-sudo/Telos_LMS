@@ -13,6 +13,8 @@ export async function registerViaLink(input: {
   password: string
   studentNumber: string
   classId?: string
+  /** Optional reason for joining (shown to the approver to speed approval). */
+  reason?: string
 }): Promise<{ ok: true }> {
   const admin = createAdminClient()
 
@@ -81,5 +83,12 @@ export async function registerViaLink(input: {
       throw new Error(enrErr.message)
     }
   }
+
+  // 7) Optional join reason (shown to the approver). Best-effort — don't fail registration.
+  const reason = input.reason?.trim()
+  if (reason) {
+    await admin.from('profiles').update({ join_reason: reason.slice(0, 500) }).eq('id', created.user.id)
+  }
+
   return { ok: true }
 }
