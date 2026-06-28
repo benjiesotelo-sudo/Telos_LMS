@@ -1,11 +1,11 @@
 'use server'
 
 import { createClient, createAdminClient } from '@/lib/supabase/server'
-import type { Question, AnswerKeyItem } from '@/lib/types'
+import type { Question, AnswerKeyItem, AssessmentType } from '@/lib/types'
 
 export interface AssessmentKeyResult {
   title: string
-  type: 'activity' | 'quiz' | 'exam'
+  type: AssessmentType
   questions: Question[]
   answerKey: Record<string, AnswerKeyItem>
 }
@@ -71,7 +71,7 @@ export async function getAssessmentKey(input: {
 
   return {
     title: assessment.title as string,
-    type: assessment.type as 'activity' | 'quiz' | 'exam',
+    type: assessment.type as AssessmentType,
     questions: assessment.questions as Question[],
     answerKey: keyRow.answer_key as Record<string, AnswerKeyItem>,
   }

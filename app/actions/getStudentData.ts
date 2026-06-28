@@ -109,7 +109,7 @@ async function loadStudentClassData(studentId: string, onlyClassId?: string) {
 
 function buildTask(a: any, subMap: Map<string, any>, overrideMap: Map<string, number>, classId: string): StudentTask {
   const asmt = a.assessment ?? {}
-  const type = (asmt.type ?? 'quiz') as 'activity' | 'quiz' | 'exam'
+  const type = (asmt.type ?? 'quiz') as StudentTask['type']
   const totalPoints = Number(asmt.total_points ?? 0)
   const sub = subMap.get(a.id)
   const graded = sub?.status === 'graded'

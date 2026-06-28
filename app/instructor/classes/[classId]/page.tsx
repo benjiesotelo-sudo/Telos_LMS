@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getClassDetail } from '@/app/actions/getClassDetail'
 import { getClassRemovalRequests } from '@/app/actions/removalRequests'
 import { RemoveStudent } from './RemoveStudent'
+import { typeName } from '@/lib/assessmentType'
 import { AssignmentMetaControls } from '@/app/instructor/AssignmentMetaControls'
 import { ClassWeightsForm } from '@/app/instructor/ClassWeightsForm'
 import { ClassSettingsForm } from '@/app/instructor/ClassSettingsForm'
@@ -46,12 +47,6 @@ export default async function ClassDetailPage({
   // Pending removal requests for this class → student ids (so the roster shows status).
   const removalReqs = await getClassRemovalRequests({ classId: cls.id })
   const pendingRemoval = new Set(removalReqs.filter((r) => r.status === 'pending').map((r) => r.studentId))
-
-  const typeLabel: Record<string, string> = {
-    quiz: 'Quiz',
-    activity: 'Paper/Activity',
-    exam: 'Exam',
-  }
 
   return (
     <div className="feu-page">
@@ -127,7 +122,7 @@ export default async function ClassDetailPage({
                     borderRadius: 3,
                   }}
                 >
-                  {typeLabel[asmt.type] ?? asmt.type}
+                  {typeName(asmt.type)}
                 </span>
               </div>
 

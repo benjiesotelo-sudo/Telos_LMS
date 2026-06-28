@@ -239,7 +239,7 @@ export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
               {rows.map((row) => (
                 <tr key={row.id}>
                   <td style={tdStyle}>{row.fullName || <span className="feu-muted">—</span>}</td>
-                  <td style={{ ...tdStyle, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.email}>{row.email}</td>
+                  <td style={{ ...tdStyle, width: 200, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.email}>{row.email}</td>
                   <td style={tdStyle}>{roleBadge(row.role)}</td>
                   <td style={tdStyle}>{statusBadge(row.status)}</td>
                   <td style={tdStyle}>{row.studentNumber ?? <span className="feu-muted">—</span>}</td>
