@@ -169,18 +169,18 @@ Single source of truth for what's left to build. Order reflects "student experie
 6. ✅ **Gradebook CSV export** — BUILT.
    - ⬜ Remaining feature: **pre-quiz screen** (above). Everything else in this list shipped on `feat/theme-d-student` (local).
 
-### Hardening (cross-cutting — fold in as touched)
-- Server-side auto-save + cross-device resume (today localStorage only).
-- Status enforcement on data path: `is_active()` SECURITY DEFINER AND-ed into student read policies + status re-check in `getTakePayload` & `submitAssessment`.
-- Transactional `importAssessment` (RPC or compensating delete).
-- BEFORE-UPDATE role trigger on `profiles` (regression-proof the no-self-promote guard).
-- Duplicate-invite guard on enrollment.
-- N+1 student-dashboard query; instructor enroll/assign panels default to first course only.
-- `middleware` → `proxy` rename.
-
-### Smaller deferred follow-ups
-- Section-picker at approval for general-link registrants who joined with no section.
-- Tidy swallowed `profiles`-query errors in Theme B actions.
+### Hardening — ✅ ALL BUILT this session (migrations 0014–0017, branch `feat/theme-d-student`)
+- ✅ Server-side auto-save + cross-device resume — `quiz_attempts.answers` (0017) + `saveDraft`/`getDraft`; TakeForm saves to localStorage + server, resumes from server.
+- ✅ Status enforcement — `is_active()` (0014) AND-ed into assignments/assessments select policies + status re-check in `getTakePayload` & `submitAssessment`.
+- ✅ Transactional `importAssessment` — `import_assessment()` RPC (0016), single transaction, no orphan rows.
+- ✅ BEFORE-UPDATE role/status guard trigger on `profiles` (0015) — regression-proof even if table UPDATE is re-granted.
+- ✅ Pre-quiz screen — timer starts on Start click (getAttemptStatus read-only + TakeGate).
+- ✅ Swallowed `profiles`-query errors tidied (registerViaLink dup-guard fail-closed; approvePending write-error checks).
+- ✅ Section-picker at approval for unplaced general-link registrants (PendingPanel).
+- ✅ `middleware` → `proxy` rename (Next 16 convention).
+- ✅ Student pages added to the e2e smoke (16/16: 12 instructor + 4 student).
+- Obsolete (no longer applies): "instructor enroll/assign defaults to first course" (enrollment lists all classes, assign is class-scoped); "student-dashboard N+1" (replaced by getStudentOverview batched queries).
+- Verification: **276 unit tests green**, `npm run build` clean, e2e smoke 16/16. ⚠️ Cloud still at 0010 — `supabase db push` of 0011–0017 required before/after merge.
 
 ### Cloud/ops (run in Supabase dashboard — Benjie's hands, not code)
 - Schedule `purge_expired_pending()` via pg_cron.
