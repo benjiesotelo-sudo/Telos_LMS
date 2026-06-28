@@ -34,9 +34,11 @@ export async function registerViaLink(input: {
   const email = input.email.trim().toLowerCase()
   const sn = input.studentNumber.trim()
   if (!sn) throw new Error('Student number is required')
-  const { data: byEmail } = await admin.from('profiles').select('id').eq('email', email).maybeSingle()
+  const { data: byEmail, error: byEmailErr } = await admin.from('profiles').select('id').eq('email', email).maybeSingle()
+  if (byEmailErr) throw new Error('Could not verify the email — please try again')
   if (byEmail) throw new Error(`This email (${email}) is already registered`)
-  const { data: bySn } = await admin.from('profiles').select('id').eq('student_number', sn).maybeSingle()
+  const { data: bySn, error: bySnErr } = await admin.from('profiles').select('id').eq('student_number', sn).maybeSingle()
+  if (bySnErr) throw new Error('Could not verify the student number — please try again')
   if (bySn) throw new Error(`Student number ${sn} is already registered`)
 
   // 3) Resolve the target class (class link → its class; general → caller's choice).
