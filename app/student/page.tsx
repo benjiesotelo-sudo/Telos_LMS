@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getStudentTodo, getStudentDone } from '@/app/actions/getStudentData'
 import { getMyInvites } from '@/app/actions/invites'
-import { TaskList } from './TaskList'
+import { DashboardTabs } from './DashboardTabs'
 import { InvitesPanel } from './InvitesPanel'
 
 export default async function StudentDashboard() {
@@ -19,21 +19,7 @@ export default async function StudentDashboard() {
 
       <InvitesPanel invites={invites} />
 
-      <div className="feu-card" style={{ marginBottom: 20 }}>
-        <h2 style={{ fontSize: 16, margin: '0 0 4px', color: 'var(--gold-dk)' }}>
-          To-Do {todo.length > 0 && <span className="feu-muted" style={{ fontSize: 13, fontWeight: 400 }}>({todo.length})</span>}
-        </h2>
-        <p className="feu-muted" style={{ fontSize: 12, margin: '0 0 12px' }}>Open across all your classes, soonest deadline first.</p>
-        {todo.length === 0 ? <p className="feu-muted">You&apos;re all caught up. 🎉</p> : <TaskList tasks={todo} />}
-      </div>
-
-      <div className="feu-card">
-        <h2 style={{ fontSize: 16, margin: '0 0 4px', color: 'var(--green)' }}>
-          Done {done.length > 0 && <span className="feu-muted" style={{ fontSize: 13, fontWeight: 400 }}>({done.length})</span>}
-        </h2>
-        <p className="feu-muted" style={{ fontSize: 12, margin: '0 0 12px' }}>Most recently finished first.</p>
-        {done.length === 0 ? <p className="feu-muted">Nothing submitted yet.</p> : <TaskList tasks={done} />}
-      </div>
+      <DashboardTabs todo={todo} done={done} />
     </div>
   )
 }
