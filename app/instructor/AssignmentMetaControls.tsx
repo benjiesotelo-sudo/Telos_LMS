@@ -18,10 +18,14 @@ export function AssignmentMetaControls({ assignment }: AssignmentMetaControlsPro
   const [opensAt, setOpensAt] = useState(assignment.opensAt ?? '')
   const [closesAt, setClosesAt] = useState(assignment.closesAt ?? '')
   const [dueDate, setDueDate] = useState(assignment.dueDate ?? '')
-  const [duration, setDuration] = useState(assignment.durationMinutes != null ? String(assignment.durationMinutes) : '')
+  const initialDuration = assignment.durationMinutes != null ? String(assignment.durationMinutes) : ''
+  const [duration, setDuration] = useState(initialDuration)
 
   // Saves ONLY the time limit (independent of the date fields). Blank = untimed.
   function saveDuration() {
+    // No-op if the field wasn't actually changed — avoids converting an inherited
+    // assessment default into an explicit per-assignment override on a stray blur.
+    if (duration.trim() === initialDuration.trim()) return
     const t = duration.trim()
     const minutes = t === '' ? null : parseFloat(t)
     if (minutes !== null && (isNaN(minutes) || minutes <= 0)) {

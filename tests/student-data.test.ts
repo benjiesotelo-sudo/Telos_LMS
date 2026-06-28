@@ -19,6 +19,7 @@ let studentId: string
 let classId: string
 let quizAsgId: string
 let hwAsgId: string
+let manualAsgId: string
 let quizAssessmentId: string
 
 beforeAll(async () => {
@@ -45,6 +46,11 @@ beforeAll(async () => {
   const { data: hw } = await admin.from('assessments').insert({ instructor_id: instructorId, title: 'SD Homework', type: 'activity', total_points: 10, questions: [] }).select('id').single()
   const ha = await seedAssignment({ assessmentId: hw!.id, classId, instructorId })
   hwAsgId = ha.id
+
+  // A MANUAL assessment with a (contrived) submission — must NEVER appear in the Done list.
+  const { data: man } = await admin.from('assessments').insert({ instructor_id: instructorId, title: 'SD Manual', type: 'activity', total_points: 20, questions: [], is_manual: true }).select('id').single()
+  manualAsgId = (await seedAssignment({ assessmentId: man!.id, classId, instructorId })).id
+  await admin.from('submissions').insert({ assignment_id: manualAsgId, student_id: studentId, instructor_id: instructorId, answers: {}, earned: 18, possible: 20, score: 90, status: 'graded', graded_at: new Date().toISOString() })
 })
 
 describe('getStudentOverview', () => {
@@ -53,7 +59,7 @@ describe('getStudentOverview', () => {
     const ov = await getStudentOverview()
     expect(ov.classes).toHaveLength(1)
     const cls = ov.classes[0]
-    expect(cls.tasks).toHaveLength(2)
+    expect(cls.tasks).toHaveLength(3) // quiz + homework + manual
 
     const quiz = cls.tasks.find((t) => t.assignmentId === quizAsgId)!
     expect(quiz.submitted).toBe(true)
@@ -71,7 +77,7 @@ describe('getStudentClassDetail', () => {
     await setTestUser(`${tag}-stu@x.com`, PW)
     const detail = await getStudentClassDetail({ classId })
     expect(detail).not.toBeNull()
-    expect(detail!.tasks).toHaveLength(2)
+    expect(detail!.tasks).toHaveLength(3) // quiz + homework + manual
   })
 })
 
@@ -96,6 +102,12 @@ describe('getStudentDone', () => {
     const quiz = done.find((t) => t.assignmentId === quizAsgId)!
     expect(quiz.submittedAt).not.toBeNull()
     expect(quiz.classLabel).toMatch(new RegExp(tag))
+  })
+
+  it('excludes manual/offline items even if they have a submission row', async () => {
+    await setTestUser(`${tag}-stu@x.com`, PW)
+    const done = await getStudentDone()
+    expect(done.map((t) => t.assignmentId)).not.toContain(manualAsgId)
   })
 })
 

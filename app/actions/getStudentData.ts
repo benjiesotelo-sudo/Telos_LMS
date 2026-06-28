@@ -217,7 +217,7 @@ export async function getStudentDone(): Promise<(StudentTask & { classId: string
   const items: (StudentTask & { classId: string; classLabel: string })[] = []
   for (const cls of assembleClasses(classes, assignments, subMap, overrideMap)) {
     for (const t of cls.tasks) {
-      if (!t.submitted) continue
+      if (t.isManual || !t.submitted) continue
       items.push({ ...t, classId: cls.classId, classLabel: `${cls.code} - ${cls.sectionLabel}` })
     }
   }

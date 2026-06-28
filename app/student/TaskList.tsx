@@ -76,7 +76,8 @@ export function TaskList({ tasks }: { tasks: (StudentTask & { classLabel?: strin
         const due = fmtDate(t.closesAt ?? t.dueDate)
         const metaParts: string[] = []
         if (t.classLabel) metaParts.push(t.classLabel)
-        if (t.submitted && t.submittedAt) metaParts.push(`Submitted ${fmtDate(t.submittedAt)}`)
+        // A submitted task always shows its submission status (never a deadline).
+        if (t.submitted) metaParts.push(t.submittedAt ? `Submitted ${fmtDate(t.submittedAt)}` : 'Submitted')
         else if (due) metaParts.push(`${t.closesAt ? 'Closes' : 'Due'} ${due}`)
         return (
           <div

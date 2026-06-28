@@ -96,7 +96,9 @@ export function AssessmentSettings({
         <button type="button" onClick={save} disabled={saving} className="feu-btn-green" style={{ fontSize: 13 }}>
           {saving ? 'Saving…' : 'Save settings'}
         </button>
-        {msg && <span className="feu-muted" style={{ fontSize: 13 }}>{msg}</span>}
+        {msg && (
+          <span className={msg === 'Saved.' ? 'feu-muted' : 'feu-error'} style={{ fontSize: 13 }}>{msg}</span>
+        )}
       </div>
     </div>
   )
