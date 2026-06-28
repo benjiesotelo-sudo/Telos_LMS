@@ -150,7 +150,14 @@ Autonomous build per the agreed design. **264 tests green** (was 239; +25), **`n
 - **Removal requests** (migration 0013): instructor "Request removal" (reason) on the class roster → **admin** reviews at **`/instructor/removals`** → Approve (deletes enrollment) / Reject. Instructor sees "Removal pending".
 - **Gradebook CSV export**: "Export CSV" on the Grade Sheet downloads the per-section computed sheet.
 
-### ⚠️ BEFORE MERGING this branch to main
+### SHIP STATUS (2026-06-29): MERGED to local `main` (commit 269e4eb), NOT pushed — deploy tomorrow
+The branch is merged into local `main` (37 commits ahead of origin/main) and verified green (289 tests, build clean), but **deliberately NOT pushed** — pushing deploys via Vercel, and the code needs migrations 0011–0019 which aren't on cloud yet (still 0010). **Tomorrow, in THIS order** (migrate first so there's never code-ahead-of-schema):
+1. `supabase link --project-ref dprrunxkmsavqmbuzkwf` (if needed) → `supabase db push`  (applies 0011–0019 to cloud; additive, safe for the currently-live app)
+2. `git push origin main`  → Vercel auto-deploys the new code
+3. Spot-check https://telos-lms.vercel.app (instructor + a student), then delete `feat/theme-d-student`.
+(`feat/theme-d-student` is retained until the deploy is confirmed.)
+
+### ⚠️ Original note — BEFORE MERGING this branch to main
 - It adds **migrations 0011–0019** — cloud DB is still at 0010. After merge you MUST `supabase db push` (link to `dprrunxkmsavqmbuzkwf`) so production gets the new columns/tables/enum value, else the live app errors. (Local test DB already has them.)
 - Branch is **not pushed** and **not merged** — it's local for your morning review.
 
