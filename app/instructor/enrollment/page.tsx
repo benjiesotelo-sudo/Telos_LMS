@@ -22,7 +22,10 @@ export default async function EnrollmentPage() {
         classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))}
         links={links}
       />
-      <PendingPanel rows={pending} />
+      <PendingPanel
+        rows={pending}
+        classes={classes.map((c) => ({ id: c.id, displayName: c.displayName }))}
+      />
     </div>
   )
 }

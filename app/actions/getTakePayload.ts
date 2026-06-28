@@ -11,6 +11,11 @@ export async function getTakePayload(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated.')
 
+  // Account must be active to take an assessment (suspended/pending are blocked,
+  // even with a live session). Defense-in-depth alongside the is_active() RLS gate.
+  const { data: me } = await supabase.from('profiles').select('status').eq('id', user.id).single()
+  if (me?.status !== 'active') throw new Error('Your account is not active.')
+
   // RLS on assignments only returns rows the caller is enrolled in (or owns).
   const { data: assignment, error: aErr } = await supabase
     .from('assignments')

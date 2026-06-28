@@ -11,6 +11,8 @@ export interface CreateAssignmentInput {
   opensAt?: string
   closesAt?: string
   dueDate?: string
+  /** Per-attempt time limit (minutes). If omitted, inherits the assessment's default. */
+  durationMinutes?: number | null
 }
 
 export async function createAssignment(input: CreateAssignmentInput): Promise<{ assignmentId: string }> {
@@ -27,6 +29,14 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<{ 
   if (clsErr || !cls) throw new Error('Class not found')
   if (!isAdmin && cls.instructor_id !== callerId) throw new Error('Not the class owner')
 
+  // Time limit: explicit value wins; otherwise inherit the assessment's default.
+  let durationMinutes = input.durationMinutes ?? null
+  if (input.durationMinutes === undefined) {
+    const { data: asmt } = await admin
+      .from('assessments').select('default_duration_minutes').eq('id', input.assessmentId).single()
+    durationMinutes = (asmt?.default_duration_minutes ?? null) as number | null
+  }
+
   const { data: inserted, error: insErr } = await admin
     .from('assignments')
     .insert({
@@ -39,6 +49,7 @@ export async function createAssignment(input: CreateAssignmentInput): Promise<{ 
       opens_at: input.opensAt ?? null,
       closes_at: input.closesAt ?? null,
       due_date: input.dueDate ?? null,
+      duration_minutes: durationMinutes != null && durationMinutes > 0 ? Math.round(durationMinutes) : null,
     })
     .select('id')
     .single()

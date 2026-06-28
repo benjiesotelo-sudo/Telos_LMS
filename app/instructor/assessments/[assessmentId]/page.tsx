@@ -2,6 +2,9 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getAssessmentKey } from '@/app/actions/getAssessmentKey'
+import { AssessmentSettings } from './AssessmentSettings'
+import { typeName } from '@/lib/assessmentType'
+import type { AssessmentType } from '@/lib/types'
 
 export default async function AssessmentPreviewPage({
   params,
@@ -39,11 +42,15 @@ export default async function AssessmentPreviewPage({
 
   const { title, type, questions, answerKey } = detail
 
-  const typeLabel: Record<string, string> = {
-    quiz:     'Quiz',
-    activity: 'Paper / Activity',
-    exam:     'Exam',
-  }
+  // Current settings (instructor owns the row → RLS allows the read).
+  const { data: setRow } = await supabase
+    .from('assessments')
+    .select('default_duration_minutes, is_manual, is_graded')
+    .eq('id', assessmentId)
+    .maybeSingle()
+  const defaultDuration = (setRow?.default_duration_minutes ?? null) as number | null
+  const isManual = setRow?.is_manual === true
+  const isGraded = setRow?.is_graded !== false
 
   return (
     <div className="feu-page">
@@ -70,12 +77,23 @@ export default async function AssessmentPreviewPage({
               borderRadius: 3,
             }}
           >
-            {typeLabel[type] ?? type}
+            {typeName(type)}
           </span>
         </div>
-        <p className="feu-muted" style={{ fontSize: 13, margin: 0 }}>
+        <p className="feu-muted" style={{ fontSize: 13, margin: '0 0 14px' }}>
           Answer key preview &mdash; instructor view only
         </p>
+        <div style={{ borderTop: '1px solid var(--border)', paddingTop: 14 }}>
+          <h2 style={{ fontSize: 15, margin: '0 0 12px', color: 'var(--green)' }}>Settings</h2>
+          <AssessmentSettings
+            assessmentId={assessmentId}
+            title={title}
+            type={type as AssessmentType}
+            defaultDuration={defaultDuration}
+            isManual={isManual}
+            isGraded={isGraded}
+          />
+        </div>
       </section>
 
       {/* Questions */}

@@ -237,6 +237,20 @@ describe('computeStudentMarks', () => {
     expect(m.letter).toBeNull()
     expect(m.qp).toBeNull()
   })
+
+  it('homework counts in the Papers/HW bucket; ungraded items are excluded', () => {
+    const mixed = [
+      { assessmentId: 'q', type: 'quiz' as const, period: 'midterm' as const },
+      { assessmentId: 'h', type: 'homework' as const, period: 'midterm' as const },          // → papers bucket
+      { assessmentId: 'p', type: 'activity' as const, period: 'midterm' as const, graded: true },
+      { assessmentId: 'practice', type: 'homework' as const, period: 'midterm' as const, graded: false }, // excluded
+      { assessmentId: 'e', type: 'exam' as const, period: 'midterm' as const },
+    ]
+    // papers avg = (h 70 + p 90)/2 = 80 (practice 0 excluded); quizzes 80; exam 100
+    // midterm = 80*.3 + 80*.2 + 100*.5 = 24 + 16 + 50 = 90
+    const m = computeStudentMarks({ q: 80, h: 70, p: 90, practice: 0, e: 100 }, mixed, weights)
+    expect(m.midtermMark).toBe(90)
+  })
 })
 
 // ---------------------------------------------------------------------------

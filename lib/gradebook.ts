@@ -195,8 +195,11 @@ export interface StudentMarks {
 
 export interface MarkAssessment {
   assessmentId: string
-  type:   'activity' | 'quiz' | 'exam'
+  /** quiz · homework · activity · exam (homework + activity share the papers bucket). */
+  type:   'quiz' | 'homework' | 'activity' | 'exam'
   period: 'midterm' | 'final'
+  /** Default true. When false the assessment is ungraded (practice) and excluded from marks. */
+  graded?: boolean
 }
 
 /**
@@ -220,12 +223,13 @@ export function computeStudentMarks(
   }
 
   for (const a of assessments) {
+    if (a.graded === false) continue // ungraded/practice — excluded from marks
     const val = cells[a.assessmentId]
     if (val === null || val === undefined) continue
     const g = groups[a.period]
     if      (a.type === 'quiz')     g.quizzes.push(val)
-    else if (a.type === 'activity') g.papers.push(val)
     else if (a.type === 'exam')     g.exam.push(val)
+    else                            g.papers.push(val) // 'activity' OR 'homework' → Papers/HW
   }
 
   const midtermMark = periodMark(

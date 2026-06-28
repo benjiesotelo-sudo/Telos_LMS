@@ -3,13 +3,15 @@
 import { createClient, createAdminClient } from '@/lib/supabase/server'
 import { refresh } from 'next/cache'
 
-const VALID_TYPES = ['activity', 'quiz', 'exam'] as const
+const VALID_TYPES = ['quiz', 'homework', 'activity', 'exam'] as const
 type AssessmentType = (typeof VALID_TYPES)[number]
 
 export async function createManualAssessment(input: {
   title: string
   type: AssessmentType
   totalPoints: number
+  /** Homework/activity may be ungraded (practice); quiz/exam are forced graded. Default true. */
+  isGraded?: boolean
 }): Promise<{ assessmentId: string }> {
   // --- validation ---
   if (!input.title.trim()) {
@@ -21,6 +23,8 @@ export async function createManualAssessment(input: {
   if (typeof input.totalPoints !== 'number' || input.totalPoints <= 0) {
     throw new Error('total_points must be a positive number')
   }
+  // Quiz/exam always graded; homework/activity honor the flag (default graded).
+  const isGraded = input.type === 'quiz' || input.type === 'exam' ? true : input.isGraded !== false
 
   // --- caller identity + role gate ---
   const supabase = await createClient()
@@ -50,6 +54,7 @@ export async function createManualAssessment(input: {
       total_points: input.totalPoints,
       questions: [],
       is_manual: true,
+      is_graded: isGraded,
     })
     .select('id')
     .single()

@@ -5,12 +5,7 @@ import { listClasses } from '@/app/actions/listClasses'
 import { ImportPanel } from '@/app/instructor/ImportPanel'
 import { ManualAssessmentPanel } from '@/app/instructor/ManualAssessmentPanel'
 import { AssignPanel } from '@/app/instructor/AssignPanel'
-
-const typeLabel: Record<string, string> = {
-  quiz:     'Quiz',
-  activity: 'Paper / Activity',
-  exam:     'Exam',
-}
+import { typeName } from '@/lib/assessmentType'
 
 export default async function AssessmentsPage() {
   const supabase = await createClient()
@@ -68,7 +63,7 @@ export default async function AssessmentsPage() {
                       borderRadius: 3,
                     }}
                   >
-                    {typeLabel[a.type] ?? a.type}
+                    {typeName(a.type)}
                   </span>
                   <span
                     style={{

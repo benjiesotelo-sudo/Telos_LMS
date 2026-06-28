@@ -19,6 +19,7 @@ export function RegisterForm({ token, kind, sections }: {
   const [studentNumber, setStudentNumber] = useState('')
   const [password, setPassword] = useState('')
   const [classId, setClassId] = useState('')
+  const [reason, setReason] = useState('')
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
   const [done, setDone] = useState(false)
@@ -47,6 +48,7 @@ export function RegisterForm({ token, kind, sections }: {
         password,
         studentNumber,
         classId: classId || undefined,
+        reason: reason.trim() || undefined,
       })
       setDone(true)
     } catch (e) {
@@ -136,6 +138,18 @@ export function RegisterForm({ token, kind, sections }: {
           </select>
         </>
       )}
+
+      {/* Optional reason — helps the instructor approve faster */}
+      <label className="feu-label" htmlFor="r-reason">Reason for joining (optional)</label>
+      <textarea
+        id="r-reason"
+        className="feu-input"
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+        rows={2}
+        maxLength={500}
+        placeholder="Optional — a short reason can speed up approval (e.g. your course/section or instructor)."
+      />
 
       <div style={{ marginTop: 14 }}>
         <button type="button" className="feu-btn-green" onClick={onSubmit} disabled={busy || !canSubmit}>

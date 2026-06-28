@@ -3,7 +3,8 @@ import { Sidebar } from '@/app/components/Sidebar'
 
 const ITEMS = [
   { href: '/student', label: 'Dashboard' },
-  { href: '/student/classes', label: 'My Classes' },
+  { href: '/student/classes', label: 'Classes' },
+  { href: '/student/grades', label: 'Grades' },
   { href: '/student/profile', label: 'Profile' },
 ]
 

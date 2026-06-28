@@ -1,27 +1,30 @@
 'use client'
 import { useState } from 'react'
 import { createManualAssessment } from '@/app/actions/createManualAssessment'
-
-type AssessmentType = 'activity' | 'quiz' | 'exam'
+import type { AssessmentType } from '@/lib/types'
 
 export function ManualAssessmentPanel() {
   const [title, setTitle] = useState('')
-  const [type, setType] = useState<AssessmentType>('activity')
+  const [type, setType] = useState<AssessmentType>('homework')
   const [totalPoints, setTotalPoints] = useState(100)
+  const [graded, setGraded] = useState(true)
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const canBeUngraded = type === 'homework' || type === 'activity'
 
   async function onCreate() {
     setBusy(true)
     setMsg('')
     try {
-      const { assessmentId } = await createManualAssessment({ title, type, totalPoints })
+      const { assessmentId } = await createManualAssessment({ title, type, totalPoints, isGraded: canBeUngraded ? graded : true })
       setMsg(
         `Created assessment ${assessmentId}. Now assign it to a class below (paste this id into Assign).`,
       )
       setTitle('')
-      setType('activity')
+      setType('homework')
       setTotalPoints(100)
+      setGraded(true)
     } catch (e) {
       setMsg(`Error: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
@@ -54,8 +57,9 @@ export function ManualAssessmentPanel() {
         onChange={(e) => setType(e.target.value as AssessmentType)}
         style={{ marginBottom: 10 }}
       >
-        <option value="activity">Homework / Activity</option>
         <option value="quiz">Quiz</option>
+        <option value="homework">Homework</option>
+        <option value="activity">Activity</option>
         <option value="exam">Exam</option>
       </select>
 
@@ -69,6 +73,13 @@ export function ManualAssessmentPanel() {
         onChange={(e) => setTotalPoints(Number(e.target.value))}
         style={{ marginBottom: 12 }}
       />
+
+      {canBeUngraded && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, marginBottom: 12, cursor: 'pointer' }}>
+          <input type="checkbox" checked={graded} onChange={(e) => setGraded(e.target.checked)} style={{ accentColor: 'var(--green)' }} />
+          Counts toward the grade (uncheck for practice)
+        </label>
+      )}
 
       <div style={{ marginTop: 4 }}>
         <button

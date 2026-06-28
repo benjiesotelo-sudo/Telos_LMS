@@ -1,12 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { createAssignment } from '@/app/actions/createAssignment'
-
-const ASSESSMENT_TYPE_LABEL: Record<string, string> = {
-  quiz: 'Quiz',
-  activity: 'Paper / Activity',
-  exam: 'Exam',
-}
+import { typeName } from '@/lib/assessmentType'
 
 export function AssignPanel({
   classes,
@@ -20,6 +15,7 @@ export function AssignPanel({
   const [period, setPeriod] = useState<'midterm' | 'final'>('midterm')
   const [opensAt, setOpensAt] = useState('')
   const [closesAt, setClosesAt] = useState('')
+  const [duration, setDuration] = useState('')
   const [msg, setMsg] = useState('')
   const [busy, setBusy] = useState(false)
 
@@ -27,17 +23,26 @@ export function AssignPanel({
     setBusy(true)
     setMsg('')
     try {
+      const t = duration.trim()
+      const minutes = t === '' ? undefined : parseFloat(t) // undefined = inherit assessment default
+      if (minutes !== undefined && (isNaN(minutes) || minutes <= 0)) {
+        setMsg('Assign failed: time limit must be a positive number')
+        setBusy(false)
+        return
+      }
       const res = await createAssignment({
         assessmentId,
         classId,
         period,
         opensAt: opensAt ? new Date(opensAt).toISOString() : undefined,
         closesAt: closesAt ? new Date(closesAt).toISOString() : undefined,
+        durationMinutes: minutes,
       })
       setMsg(`Assigned (${res.assignmentId})`)
       setAssessmentId('')
       setOpensAt('')
       setClosesAt('')
+      setDuration('')
     } catch (e) {
       setMsg(`Assign failed: ${e instanceof Error ? e.message : String(e)}`)
     } finally {
@@ -77,7 +82,7 @@ export function AssignPanel({
             <option value="">— select an assessment —</option>
             {assessments.map((a) => (
               <option key={a.id} value={a.id}>
-                {a.title} ({ASSESSMENT_TYPE_LABEL[a.type] ?? a.type})
+                {a.title} ({typeName(a.type)})
               </option>
             ))}
           </select>
@@ -123,6 +128,20 @@ export function AssignPanel({
               onChange={(e) => setClosesAt(e.target.value)}
             />
           </div>
+        </div>
+        <div>
+          <label className="feu-label" htmlFor="assign-duration">Time limit (minutes)</label>
+          <input
+            id="assign-duration"
+            aria-label="Time limit in minutes"
+            className="feu-input"
+            type="number"
+            min={1}
+            step={1}
+            placeholder="blank = use assessment default / untimed"
+            value={duration}
+            onChange={(e) => setDuration(e.target.value)}
+          />
         </div>
       </div>
       <div style={{ marginTop: 14 }}>

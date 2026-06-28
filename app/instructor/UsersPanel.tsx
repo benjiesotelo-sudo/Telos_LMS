@@ -157,6 +157,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 // ── Main Panel ────────────────────────────────────────────────────────────
 export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
   const [rows, setRows] = useState<AdminUserRow[]>(initialRows)
+  const [query, setQuery] = useState('')
   const [modal, setModal] = useState<ModalState>({ kind: 'none' })
   const [flash, setFlash] = useState('')
   const [resetPw, setResetPw] = useState('')
@@ -205,13 +206,37 @@ export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
 
   const thStyle: React.CSSProperties = { textAlign: 'left', padding: '6px 10px', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', color: 'var(--gray, #666)', borderBottom: '2px solid var(--line, #ddd)' }
   const tdStyle: React.CSSProperties = { padding: '8px 10px', fontSize: 13, borderBottom: '1px solid var(--line, #eee)', verticalAlign: 'middle' }
+  const btnSm: React.CSSProperties = { fontSize: 12, padding: '4px 10px', borderRadius: 5, cursor: 'pointer', whiteSpace: 'nowrap', lineHeight: 1.2 }
+  // Pin the Actions column to the right edge so Edit/Reset/Delete are ALWAYS visible,
+  // no horizontal scrolling (or scrolling past 500 rows) needed to reach them.
+  const stickyActionsTh: React.CSSProperties = { ...thStyle, textAlign: 'right', position: 'sticky', right: 0, background: '#fff', zIndex: 2, boxShadow: '-8px 0 8px -8px rgba(0,0,0,0.18)' }
+  const stickyActionsTd: React.CSSProperties = { ...tdStyle, textAlign: 'right', position: 'sticky', right: 0, background: '#fff', zIndex: 1, boxShadow: '-8px 0 8px -8px rgba(0,0,0,0.18)' }
+
+  const q = query.trim().toLowerCase()
+  const filtered = q === ''
+    ? rows
+    : rows.filter((r) =>
+        [r.fullName, r.email, r.studentNumber, r.role, r.status]
+          .some((v) => (v ?? '').toLowerCase().includes(q)),
+      )
 
   return (
     <section aria-labelledby="users-h" className="feu-card" style={{ marginTop: 24 }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <h2 id="users-h" style={{ margin: 0, fontSize: 16, color: 'var(--green, #1a7c4e)' }}>All Users ({rows.length})</h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, gap: 12, flexWrap: 'wrap' }}>
+        <h2 id="users-h" style={{ margin: 0, fontSize: 16, color: 'var(--green, #1a7c4e)' }}>
+          All Users ({q === '' ? rows.length : `${filtered.length} of ${rows.length}`})
+        </h2>
         <button type="button" className="feu-btn-green" onClick={() => setModal({ kind: 'create' })}>+ Create user</button>
       </div>
+
+      <input
+        type="search"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+        placeholder="Search by name, email, student #, role, or status…"
+        aria-label="Search users"
+        style={{ width: '100%', maxWidth: 420, padding: '7px 10px', border: '1px solid var(--border)', borderRadius: 6, fontSize: 13, marginBottom: 14, boxSizing: 'border-box' }}
+      />
 
       {flash && (
         <div style={{ background: 'var(--green-lt, #e8f5ee)', border: '1px solid var(--green, #1a7c4e)', borderRadius: 4, padding: '8px 12px', marginBottom: 12, fontSize: 13, color: 'var(--green, #1a7c4e)' }}>
@@ -221,6 +246,8 @@ export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
 
       {rows.length === 0 ? (
         <p className="feu-muted">No users found.</p>
+      ) : filtered.length === 0 ? (
+        <p className="feu-muted">No users match &ldquo;{query}&rdquo;.</p>
       ) : (
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
@@ -231,22 +258,22 @@ export function UsersPanel({ rows: initialRows }: { rows: AdminUserRow[] }) {
                 <th style={thStyle}>Role</th>
                 <th style={thStyle}>Status</th>
                 <th style={thStyle}>Student #</th>
-                <th style={{ ...thStyle, textAlign: 'right' }}>Actions</th>
+                <th style={stickyActionsTh}>Actions</th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((row) => (
+              {filtered.map((row) => (
                 <tr key={row.id}>
                   <td style={tdStyle}>{row.fullName || <span className="feu-muted">—</span>}</td>
-                  <td style={tdStyle}>{row.email}</td>
+                  <td style={{ ...tdStyle, width: 200, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={row.email}>{row.email}</td>
                   <td style={tdStyle}>{roleBadge(row.role)}</td>
                   <td style={tdStyle}>{statusBadge(row.status)}</td>
                   <td style={tdStyle}>{row.studentNumber ?? <span className="feu-muted">—</span>}</td>
-                  <td style={{ ...tdStyle, textAlign: 'right' }}>
-                    <span style={{ display: 'inline-flex', gap: 4 }}>
-                      <button type="button" className="feu-btn-green" style={{ fontSize: 12, padding: '3px 8px' }} onClick={() => setModal({ kind: 'edit', row })}>Edit</button>
-                      <button type="button" className="feu-btn-gold" style={{ fontSize: 12, padding: '3px 8px' }} onClick={() => { setModal({ kind: 'reset', id: row.id, fullName: row.fullName }) }}>Reset pw</button>
-                      <button type="button" style={{ fontSize: 12, padding: '3px 8px', background: 'var(--red, #c0392b)', color: '#fff', border: 'none', borderRadius: 4, cursor: 'pointer' }} onClick={() => setModal({ kind: 'delete', id: row.id, fullName: row.fullName })}>Delete</button>
+                  <td style={stickyActionsTd}>
+                    <span style={{ display: 'inline-flex', gap: 6, whiteSpace: 'nowrap' }}>
+                      <button type="button" className="feu-btn-green" style={btnSm} onClick={() => setModal({ kind: 'edit', row })}>Edit</button>
+                      <button type="button" className="feu-btn-gold" style={btnSm} onClick={() => { setModal({ kind: 'reset', id: row.id, fullName: row.fullName }) }}>Reset PW</button>
+                      <button type="button" style={{ ...btnSm, background: 'var(--red, #c0392b)', color: '#fff', border: 'none' }} onClick={() => setModal({ kind: 'delete', id: row.id, fullName: row.fullName })}>Delete</button>
                     </span>
                   </td>
                 </tr>

@@ -138,36 +138,61 @@ Merged `feat/grade-editor` → `main` and pushed (commit `3e7823d`; 8 grade-edit
 ### NEXT
 - **Verify the live deploy** once Vercel finishes: open https://telos-lms.vercel.app/instructor/grades on a real section and spot-check the editor.
 
+## 🌙 OVERNIGHT BUILD (2026-06-28→29) — Theme D + invites + removals + timer + CSV — branch `feat/theme-d-student` (LOCAL ONLY, not pushed/merged)
+Autonomous build per the agreed design. **264 tests green** (was 239; +25), **`npm run build` clean**, **e2e smoke 12/12** (instructor), and a **student-side smoke** (login + load /student, /student/todo, /student/grades, class detail — no page/console errors, nothing stuck). Screenshots: `e2e/shots/student-dashboard.png`, `e2e/shots/grade-editor-v3.png`.
+
+### Built (each tested)
+- **Reveal rule now type-aware** (`getRevealedAnswers`): homework reveals immediately when graded; quiz/exam reveal only after the **close date** (a quiz/exam with no close date never reveals — by design).
+- **Student data layer** (`getStudentData.ts`, no N+1): `getStudentOverview`, `getStudentClassDetail`, `getStudentTodo`, `getStudentGrades`.
+- **Student app**: nav = **Dashboard / To-Do / Grades / Profile**. Dashboard = My Classes with grouped tasks (Quizzes/Homework/Exams) + status/score + Take/Review links; **class detail** (`/student/classes/[classId]`) with per-class to-do; **To-Do** page (all open tasks across classes); **Grades** page (read-only FEU breakdown). Shared `TaskList`.
+- **Quiz timer** (migration 0011): default duration on the assessment (`DurationSetting` on the assessment page) → pre-fills the per-section `assignments.duration_minutes` at assign time, editable via `setAssignmentMeta`. `startAttempt` records first-open once (`quiz_attempts`); **keeps running** across refresh; `TakeForm` shows a live countdown + **auto-submits at zero**. (Limitation: a never-reopened closed tab stays `in_progress` until a server sweep — hardening follow-up.)
+- **In-app invites** (migration 0012, `enrollments.status='invited'`): instructor searches existing students by name/email/student# on the class page → invites; student sees a **Class invites** panel on the dashboard → **Accept** (→active) / **Decline**.
+- **Removal requests** (migration 0013): instructor "Request removal" (reason) on the class roster → **admin** reviews at **`/instructor/removals`** → Approve (deletes enrollment) / Reject. Instructor sees "Removal pending".
+- **Gradebook CSV export**: "Export CSV" on the Grade Sheet downloads the per-section computed sheet.
+
+### ⚠️ BEFORE MERGING this branch to main
+- It adds **migrations 0011–0019** — cloud DB is still at 0010. After merge you MUST `supabase db push` (link to `dprrunxkmsavqmbuzkwf`) so production gets the new columns/tables/enum value, else the live app errors. (Local test DB already has them.)
+- Branch is **not pushed** and **not merged** — it's local for your morning review.
+
+### Morning review — run it locally
+`cd ~/Documents/Telos_LMS` → `supabase start` → `npm run dev` → open http://localhost:3000. Log in as instructor to try: assessment default time limit, invite a student on a class page, "Request removal" + approve at /instructor/removals, Export CSV on Grades. Then log in as a student (or use the e2e student on a :3100 local-pointed server) to see Dashboard/To-Do/Grades, take a timed quiz (countdown + auto-submit), and accept a class invite. Tests: `npm test` (264). NOTE: deferred — hardening items below are NOT done; student-side pages aren't in the headless smoke yet.
+
 ## 📋 REMAINING LMS WORK — canonical checklist (2026-06-28)
 Single source of truth for what's left to build. Order reflects "student experience first."
 
-### Features to build
-1. **Theme D — Student experience** (in progress, branch `feat/theme-d-student`):
-   - **Dashboard = My Classes**, each class showing its tasks (homework / quiz / exam; room for future "materials" e.g. blogs) + a **per-class to-do**.
-   - **To-Do page** (own page): all pending tasks across classes, by deadline.
-   - **Grades page** (own page): read-only version of the instructor FEU breakdown, scoped to the student's own grades.
-   - **Class detail (student):** tasks grouped by type, deadlines/timer, status (to-do / submitted / graded), links to take or to **review answers** when revealed.
-   - **Pre-quiz screen** before a timed assessment.
-2. **Quiz timer + live countdown + auto-submit:**
-   - **Default duration on the assessment** (assessment settings); per-section **assignment.duration_minutes** pre-fills from the default, editable at assign time; untouched = default; none = untimed.
-   - Timer **starts on first open and keeps running** across refresh/close (server stores `started_at`); effective deadline = `started_at + duration`. At zero, **auto-submit** whatever's entered. Server rejects submits past the effective deadline. (Limitation: a never-reopened tab stays `in_progress` until a server sweep — hardening follow-up.)
-3. **Student answer review:** reveal rule = instructor per-quiz toggle ON + graded, then **homework reveals immediately**; **quiz/exam reveal only after the close date** (show an instructor hint that a quiz/exam needs a close date to ever reveal). Wire **review links from the class view**; students can revisit revealed items anytime. (`getRevealedAnswers` already exists — change its gate to be type-aware.)
-4. **Invite existing users to a class + in-app invites:** instructor searches existing student accounts by **name / email / student #** → creates an invite (`enrollments.status='invited'`, + `invited_by`). Student sees a **"Class invites"** area + count badge on the dashboard → **Accept** (status='active') / **Decline** (delete). Block if already enrolled/invited.
-5. **Manage students + removal-request approval:** instructor can request to **remove** a student from a class, **with a reason** → goes to an **admin review panel** → admin **Approve** (deletes the class enrollment; submissions/grades kept) / **Reject**. Instructor sees pending/approved/rejected status on the class page. (New table, e.g. `enrollment_removal_requests`.)
-6. **Gradebook CSV export:** export the computed FEU grade sheet per section.
+### Features — ✅ ALL BUILT (branch `feat/theme-d-student`, local)
+1. ✅ **Theme D — Student experience** — Dashboard (To-Do/Done tabs) / Classes / Grades / class-detail + **pre-quiz screen** (built via getAttemptStatus + TakeGate).
+2. ✅ **Quiz timer + live countdown + auto-submit** (migration 0011).
+3. ✅ **Student answer review (type-aware reveal)**.
+4. ✅ **Invite existing users + in-app accept/decline** (migration 0012).
+5. ✅ **Manage students + removal-request approval** (migration 0013).
+6. ✅ **Gradebook CSV export**.
+   - No code features remain. Plus the 2026-06-29 rounds: assessment settings, 4-type taxonomy + graded toggle, Admin Controls hub, sticky sidebar, Users search + pinned actions, pending-list redesign + join reason.
 
-### Hardening (cross-cutting — fold in as touched)
-- Server-side auto-save + cross-device resume (today localStorage only).
-- Status enforcement on data path: `is_active()` SECURITY DEFINER AND-ed into student read policies + status re-check in `getTakePayload` & `submitAssessment`.
-- Transactional `importAssessment` (RPC or compensating delete).
-- BEFORE-UPDATE role trigger on `profiles` (regression-proof the no-self-promote guard).
-- Duplicate-invite guard on enrollment.
-- N+1 student-dashboard query; instructor enroll/assign panels default to first course only.
-- `middleware` → `proxy` rename.
+### Hardening — ✅ ALL BUILT this session (migrations 0014–0017, branch `feat/theme-d-student`)
+- ✅ Server-side auto-save + cross-device resume — `quiz_attempts.answers` (0017) + `saveDraft`/`getDraft`; TakeForm saves to localStorage + server, resumes from server.
+- ✅ Status enforcement — `is_active()` (0014) AND-ed into assignments/assessments select policies + status re-check in `getTakePayload` & `submitAssessment`.
+- ✅ Transactional `importAssessment` — `import_assessment()` RPC (0016), single transaction, no orphan rows.
+- ✅ BEFORE-UPDATE role/status guard trigger on `profiles` (0015) — regression-proof even if table UPDATE is re-granted.
+- ✅ Pre-quiz screen — timer starts on Start click (getAttemptStatus read-only + TakeGate).
+- ✅ Swallowed `profiles`-query errors tidied (registerViaLink dup-guard fail-closed; approvePending write-error checks).
+- ✅ Section-picker at approval for unplaced general-link registrants (PendingPanel).
+- ✅ `middleware` → `proxy` rename (Next 16 convention).
+- ✅ Student pages added to the e2e smoke (16/16: 12 instructor + 4 student).
+- Obsolete (no longer applies): "instructor enroll/assign defaults to first course" (enrollment lists all classes, assign is class-scoped); "student-dashboard N+1" (replaced by getStudentOverview batched queries).
+### UI refinements (2026-06-29, from user review — same branch)
+After reviewing, the user asked for: (1) **Assessment Settings** — edit name / type / **default timer** on the assessment page (`updateAssessmentSettings`); (2) **timer adjustable when assigning** — a Time-limit field on the per-section assignment controls + at assign time; (3) **"Removals" → "Admin Controls"** — a hub with **Users + Removal requests** as tabs (`/instructor/admin`; old routes redirect); (4) **Student Dashboard = To-Do + Done** (dated; To-Do by deadline, Done by submit date/time; standalone `/student/todo` removed); (5) **Student Classes** list page (pick a class → contents). Student nav: Dashboard / Classes / Grades / Profile. A 2nd adversarial review found 4 issues — all fixed (getStudentDone excludes manual; submitted tasks never show a deadline; assignment-duration save no-ops when unchanged; assessment-settings errors render red).
 
-### Smaller deferred follow-ups
-- Section-picker at approval for general-link registrants who joined with no section.
-- Tidy swallowed `profiles`-query errors in Theme B actions.
+### Taxonomy + graded + UX round (2026-06-29, from user review — same branch)
+- **Assessment types are now four tags** (Quiz [Q] · Homework [H] · Activity [P] · Exam [E], via `lib/assessmentType`). Homework + Activity both grade in the **Papers/HW 20%** bucket (migration 0018 adds the `homework` enum value). Mismatched labels ("Paper/Activity" vs "Homework/Activity") fixed everywhere.
+- **Graded/ungraded toggle** (migration 0018 `assessments.is_graded`, default true): homework/activity can be marked **practice (ungraded)** — still shows a score for feedback but is **excluded from MG/FG/course marks** (computeStudentMarks + getSectionGrades + getStudentData + editor preview all honor it). Quiz/exam are **always graded** (enforced server-side). Ungraded marker shown in the grade sheet + student lists.
+- **Assessment Settings** card edits **name / type / default timer / graded** (`updateAssessmentSettings`); per-section **time-limit** field on assignment controls + at assign time.
+- **Admin Controls** hub (`/instructor/admin`) = Users + Removal-requests tabs (old routes redirect). **Sticky sidebar**; compact Users action buttons.
+- **Pending registrations** split into **Needs a section / Joined a section** with a clean row format + an **optional join reason** (migration 0019 `profiles.join_reason`, captured at registration, cleared on approval).
+- **Student Dashboard** = **To-Do | Done tabs** (Google-Classroom style).
+- Verification: **289 unit tests green**, `npm run build` clean, e2e smoke 16/16. **THREE adversarial multi-agent reviews** total (each: 4 dimensions → verify): all confirmed findings fixed (graded-only submissions; no frozen invite/removal buttons; invite-target must be a student; getDraft enrollment guard; consistent `homework` casts/labels). ⚠️ Cloud still at 0010 — `supabase db push` of migrations **0011–0019** required before/after merge.
+
+#### (prior round) UI refinements: 285 tests, 2 reviews — superseded by the line above.
 
 ### Cloud/ops (run in Supabase dashboard — Benjie's hands, not code)
 - Schedule `purge_expired_pending()` via pg_cron.

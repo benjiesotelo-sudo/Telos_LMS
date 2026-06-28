@@ -13,6 +13,10 @@ export async function submitAssessment(
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Not authenticated.')
 
+  // Account must be active to submit (suspended/pending blocked even with a live session).
+  const { data: me } = await supabase.from('profiles').select('status').eq('id', user.id).single()
+  if (me?.status !== 'active') throw new Error('Your account is not active.')
+
   // RLS-scoped read: caller must be enrolled (or own) to see the assignment.
   const { data: assignment, error: aErr } = await supabase
     .from('assignments')

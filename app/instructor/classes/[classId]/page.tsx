@@ -2,9 +2,13 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getClassDetail } from '@/app/actions/getClassDetail'
+import { getClassRemovalRequests } from '@/app/actions/removalRequests'
+import { RemoveStudent } from './RemoveStudent'
+import { typeName } from '@/lib/assessmentType'
 import { AssignmentMetaControls } from '@/app/instructor/AssignmentMetaControls'
 import { ClassWeightsForm } from '@/app/instructor/ClassWeightsForm'
 import { ClassSettingsForm } from '@/app/instructor/ClassSettingsForm'
+import { InviteStudent } from './InviteStudent'
 
 export default async function ClassDetailPage({
   params,
@@ -40,11 +44,9 @@ export default async function ClassDetailPage({
 
   const { class: cls, assessments, students } = detail
 
-  const typeLabel: Record<string, string> = {
-    quiz: 'Quiz',
-    activity: 'Paper/Activity',
-    exam: 'Exam',
-  }
+  // Pending removal requests for this class → student ids (so the roster shows status).
+  const removalReqs = await getClassRemovalRequests({ classId: cls.id })
+  const pendingRemoval = new Set(removalReqs.filter((r) => r.status === 'pending').map((r) => r.studentId))
 
   return (
     <div className="feu-page">
@@ -120,7 +122,7 @@ export default async function ClassDetailPage({
                     borderRadius: 3,
                   }}
                 >
-                  {typeLabel[asmt.type] ?? asmt.type}
+                  {typeName(asmt.type)}
                 </span>
               </div>
 
@@ -149,6 +151,7 @@ export default async function ClassDetailPage({
                 <th style={thStyle}>Student #</th>
                 <th style={thStyle}>Email</th>
                 <th style={thStyle}>Status</th>
+                <th style={thStyle}>Manage</th>
               </tr>
             </thead>
             <tbody>
@@ -170,11 +173,21 @@ export default async function ClassDetailPage({
                       {stu.status}
                     </span>
                   </td>
+                  <td style={tdStyle}>
+                    <RemoveStudent
+                      classId={cls.id}
+                      studentId={stu.studentId}
+                      studentName={stu.fullName || stu.email}
+                      pending={pendingRemoval.has(stu.studentId)}
+                    />
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
+
+        <InviteStudent classId={cls.id} />
       </section>
 
       {/* ── Weights editor ───────────────────────────────────────────────── */}

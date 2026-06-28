@@ -4,7 +4,7 @@ import { chromium } from 'playwright'
 import { mkdirSync } from 'fs'
 import { createClient } from '@supabase/supabase-js'
 
-const BASE = 'http://localhost:3100'
+const BASE = process.env.SMOKE_BASE || 'http://localhost:3100'
 const ADMIN_EMAIL = 'e2e-admin@local.test'
 const ADMIN_PASSWORD = 'E2e_admin_pass123!'
 
@@ -50,7 +50,8 @@ if (!afterLogin.includes('/instructor')) {
 }
 
 const results = []
-for (const [path, label] of ROUTES) {
+async function checkRoutes(page, routes) {
+for (const [path, label] of routes) {
   const url = `${BASE}${path}`
   const reqCounts = new Map()
   const consoleErrors = []
@@ -84,6 +85,36 @@ for (const [path, label] of ROUTES) {
   const verdict = looping ? 'LOOP' : pageErrors.length ? 'PAGE_ERROR' : stuckLoading ? 'STUCK_LOADING' : consoleErrors.length ? 'CONSOLE_ERR' : 'OK'
   results.push({ label, path, verdict, selfHits: thisPathHits, pageErrors, consoleErrors })
   console.log(`[${verdict}] ${label}  (self-requests: ${thisPathHits})${pageErrors[0] ? '  pageError: ' + pageErrors[0] : ''}${consoleErrors[0] ? '  console: ' + consoleErrors[0] : ''}`)
+}
+}
+
+// ── Instructor pass (admin) ──
+await checkRoutes(page, ROUTES)
+
+// ── Student pass (fresh context, logs in as the seeded student) ──
+const STUDENT_EMAIL = 'e2e-student@local.test'
+const STUDENT_ROUTES = [
+  ['/student', 'Student Dashboard'],
+  ['/student/classes', 'Student Classes list'],
+  ['/student/grades', 'Student Grades'],
+  [`/student/classes/${CLASS_ID}`, 'Student class detail'],
+]
+const sctx = await browser.newContext()
+const spage = await sctx.newPage()
+await spage.goto(`${BASE}/login`, { waitUntil: 'networkidle' }).catch(() => {})
+await spage.fill('input[type="email"]', STUDENT_EMAIL)
+await spage.fill('input[type="password"]', ADMIN_PASSWORD)
+await Promise.all([
+  spage.waitForURL(/\/student/, { timeout: 15000 }).catch(() => {}),
+  spage.click('button[type="submit"]'),
+])
+const sAfter = spage.url()
+console.log(`STUDENT LOGIN -> ${sAfter}`)
+if (sAfter.includes('/student')) {
+  await checkRoutes(spage, STUDENT_ROUTES)
+} else {
+  console.log('STUDENT_LOGIN_FAILED')
+  results.push({ label: 'Student login', path: '/student', verdict: 'PAGE_ERROR', selfHits: 0, pageErrors: ['student login failed'], consoleErrors: [] })
 }
 
 await browser.close()

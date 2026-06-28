@@ -249,4 +249,18 @@ describe('getTakePayload — inactive assignment is blocked', () => {
     const payload = await getTakePayload(assignmentId)
     expect(payload.title).toBe(quiz1.title)
   })
+
+  it('owner can set + clear a per-assignment time limit (duration_minutes)', async () => {
+    await setTestUser(INSTR_EMAIL, PASSWORD)
+    const { id: assignmentId } = await seedAssignment({ assessmentId, classId, instructorId })
+    const admin = (await import('@/lib/supabase/server')).createAdminClient()
+
+    await setAssignmentMeta({ assignmentId, durationMinutes: 25 })
+    let { data } = await admin.from('assignments').select('duration_minutes').eq('id', assignmentId).single()
+    expect(data!.duration_minutes).toBe(25)
+
+    await setAssignmentMeta({ assignmentId, durationMinutes: null })
+    ;({ data } = await admin.from('assignments').select('duration_minutes').eq('id', assignmentId).single())
+    expect(data!.duration_minutes).toBeNull()
+  })
 })

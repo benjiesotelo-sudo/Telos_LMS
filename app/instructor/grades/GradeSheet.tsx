@@ -32,6 +32,47 @@ function ReadCell({
   )
 }
 
+function csvEscape(x: string | number): string {
+  const s = String(x)
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
+}
+
+function exportCsv(grades: SectionGrades) {
+  const { midtermCols, finalCols } = splitPeriods(grades.assessments)
+  const cols = [...midtermCols, ...finalCols]
+  const header = [
+    'Name',
+    'Student #',
+    ...cols.map((c) => `${c.title} (%)`),
+    'Midterm',
+    'Final',
+    'Course Mark',
+    'Letter',
+    'QP',
+  ]
+  const rows = grades.students.map((s) => [
+    s.fullName,
+    s.studentNumber ?? '',
+    ...cols.map((c) => {
+      const v = s.cells[c.assessmentId]
+      return v == null ? '' : v.toFixed(2)
+    }),
+    s.midtermMark != null ? s.midtermMark.toFixed(2) : '',
+    s.finalMark != null ? s.finalMark.toFixed(2) : '',
+    s.courseMark != null ? s.courseMark.toFixed(2) : '',
+    s.letter ?? '',
+    s.qp != null ? String(s.qp) : '',
+  ])
+  const csv = [header, ...rows].map((r) => r.map(csvEscape).join(',')).join('\r\n')
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${grades.class.displayName.replace(/[^\w.-]+/g, '_')}-grades.csv`
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export function GradeSheet({ grades }: { grades: SectionGrades }) {
   const { class: cls, assessments, students } = grades
   const { midtermCols, finalCols } = splitPeriods(assessments)
@@ -43,7 +84,7 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
     return (
       <th
         key={a.id}
-        title={a.title}
+        title={a.graded ? a.title : `${a.title} — ungraded (not counted in marks)`}
         style={{
           ...thBase,
           background: typeBg(a.type),
@@ -51,10 +92,12 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
           overflow: 'hidden',
           textOverflow: 'ellipsis',
           borderLeft: isFirst ? '2px solid var(--green)' : undefined,
+          opacity: a.graded ? 1 : 0.6,
         }}
       >
         <span style={{ color: 'var(--gray)', marginRight: 2 }}>[{typeTag(a.type)}]</span>
         {a.title}
+        {!a.graded && <span style={{ display: 'block', fontSize: 9, color: 'var(--gray)', fontWeight: 400 }}>ungraded</span>}
       </th>
     )
   }
@@ -74,6 +117,16 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
         <span style={{ fontSize: 12, color: 'var(--gray)' }}>
           {students.length} student{students.length !== 1 ? 's' : ''}
         </span>
+        {students.length > 0 && assessments.length > 0 && (
+          <button
+            type="button"
+            onClick={() => exportCsv(grades)}
+            className="feu-btn-outline"
+            style={{ marginLeft: 'auto', fontSize: 12, padding: '4px 12px' }}
+          >
+            Export CSV
+          </button>
+        )}
       </div>
 
       <div
@@ -94,7 +147,7 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
           <strong style={{ color: 'var(--ink)' }}>Grade weights:</strong>&nbsp; Quizzes&nbsp;
           {Math.round(wtQuiz * 100)}%&nbsp;·&nbsp;Papers/HW&nbsp;{Math.round(wtPaper * 100)}%&nbsp;·&nbsp;Exam&nbsp;{Math.round(wtExam * 100)}%
         </span>
-        <span>[Q]&nbsp;Quiz&nbsp;·&nbsp;[P]&nbsp;Paper/Activity&nbsp;·&nbsp;[E]&nbsp;Exam</span>
+        <span>[Q]&nbsp;Quiz&nbsp;·&nbsp;[H]&nbsp;Homework&nbsp;·&nbsp;[P]&nbsp;Activity&nbsp;·&nbsp;[E]&nbsp;Exam</span>
         <span>
           <span style={{ color: 'var(--gold-dk)' }}>•</span>&nbsp;amber&nbsp;=&nbsp;manually edited grade. Edit grades in the Grade Editor below.
         </span>

@@ -1,7 +1,9 @@
 import { getTakePayload } from '@/app/actions/getTakePayload'
+import { getAttemptStatus } from '@/app/actions/startAttempt'
+import { getDraft } from '@/app/actions/draftAnswers'
 import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
-import TakeForm from './TakeForm'
+import TakeGate from './TakeGate'
 
 export default async function TakePage({
   params,
@@ -26,6 +28,13 @@ export default async function TakePage({
 
   if (existing) redirect(`/student/results/${existing.id}`)
 
+  // Read-only: is this timed, and has the attempt already started? (Does NOT start it.)
+  // Plus any server-saved draft answers (cross-device resume).
+  const [status, draft] = await Promise.all([
+    getAttemptStatus({ assignmentId }),
+    getDraft({ assignmentId }),
+  ])
+
   return (
     <div>
       <header className="feu-header">
@@ -35,7 +44,15 @@ export default async function TakePage({
         <p>{payload.type} · Answer every item, then Submit.</p>
       </header>
       <div className="feu-wrap">
-        <TakeForm assignmentId={assignmentId} questions={payload.questions} />
+        <TakeGate
+          assignmentId={assignmentId}
+          questions={payload.questions}
+          timed={status.timed}
+          durationMinutes={status.durationMinutes}
+          started={status.started}
+          deadline={status.deadline}
+          initialAnswers={draft}
+        />
       </div>
     </div>
   )

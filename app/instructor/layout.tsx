@@ -12,7 +12,7 @@ const BASE_ITEMS = [
 ]
 
 const ADMIN_ITEMS = [
-  { href: '/instructor/users', label: 'Users' },
+  { href: '/instructor/admin', label: 'Admin Controls' },
 ]
 
 export default async function InstructorLayout({ children }: { children: React.ReactNode }) {

@@ -56,7 +56,7 @@ export async function getSectionGrades(input: {
       .eq('class_id', input.classId),
     admin
       .from('assignments')
-      .select('id, assessment_id, period, assessment:assessment_id(title, type, total_points)')
+      .select('id, assessment_id, period, assessment:assessment_id(title, type, total_points, is_graded)')
       .eq('class_id', input.classId),
   ])
   if (enrollErr) throw new Error(`Failed to load enrollments: ${enrollErr.message}`)
@@ -72,7 +72,8 @@ export async function getSectionGrades(input: {
     id:           a.id           as string,
     assessmentId: a.assessment_id as string,
     title:        (a.assessment?.title ?? '') as string,
-    type:         (a.assessment?.type  ?? 'quiz') as 'activity' | 'quiz' | 'exam',
+    type:         (a.assessment?.type  ?? 'quiz') as SectionAssessmentMeta['type'],
+    graded:       a.assessment?.is_graded !== false,
     period:       a.period as 'midterm' | 'final',
     totalPoints:  Number(a.assessment?.total_points ?? 0),
   }))
@@ -107,7 +108,7 @@ export async function getSectionGrades(input: {
   ] = await Promise.all([
     admin
       .from('submissions')
-      .select('assignment_id, student_id, earned, possible')
+      .select('assignment_id, student_id, earned, possible, status')
       .in('assignment_id', assignmentIds)
       .in('student_id', studentIds),
     admin
@@ -120,11 +121,12 @@ export async function getSectionGrades(input: {
   if (ovErr) throw new Error(`Failed to load grade overrides: ${ovErr.message}`)
 
   // Map key: `${assignmentId}:${studentId}` → { earned, possible }
-  const subMap = new Map<string, { earned: number; possible: number }>()
+  const subMap = new Map<string, { earned: number; possible: number; status: string }>()
   for (const sub of submissions ?? []) {
     subMap.set(`${sub.assignment_id}:${sub.student_id}`, {
       earned:   Number(sub.earned),
       possible: Number(sub.possible),
+      status:   sub.status as string,
     })
   }
 
@@ -146,10 +148,14 @@ export async function getSectionGrades(input: {
       const submissionKey = `${asmt.id}:${stu.studentId}`
       const sub           = subMap.get(submissionKey)
 
+      // Only GRADED submissions count toward grades (mirrors getStudentData) —
+      // an in_progress/submitted row must not appear in the sheet.
+      const graded = sub?.status === 'graded'
+
       // Surface the auto-graded raw score (submission.earned) for the editor —
       // independent of whether an override currently shadows it, so the editor
       // can show "auto N" and decide whether an entered value differs from auto.
-      if (sub) autoRaw[asmt.assessmentId] = sub.earned
+      if (sub && graded) autoRaw[asmt.assessmentId] = sub.earned
 
       if (overrideMap.has(overrideKey)) {
         const rawScore = overrideMap.get(overrideKey)!
@@ -160,11 +166,11 @@ export async function getSectionGrades(input: {
         // treat the cell as null to avoid division-by-zero.
         const tp = asmt.totalPoints
         cells[asmt.assessmentId] = tp > 0 ? (rawScore / tp) * 100 : null
-      } else if (sub && sub.possible > 0) {
-        // Auto-graded submission percentage (unchanged).
+      } else if (sub && graded && sub.possible > 0) {
+        // Auto-graded submission percentage.
         cells[asmt.assessmentId] = (sub.earned / sub.possible) * 100
       } else {
-        // No submission (or ungraded with possible=0).
+        // No graded submission (or ungraded / possible=0).
         cells[asmt.assessmentId] = null
       }
     }

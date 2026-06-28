@@ -58,6 +58,7 @@ function EditorGrid({
     assessmentId: a.assessmentId,
     type: a.type,
     period: a.period,
+    graded: a.graded,
   }))
 
   const [edits, setEdits] = useState<Record<string, string>>({})

@@ -20,7 +20,7 @@ export interface AnswerKeyItem {
 
 export interface AssessmentImport {
   title: string
-  type: 'activity' | 'quiz' | 'exam'
+  type: AssessmentType
   total_points: number
   questions: Question[]
   answer_key: Record<string, AnswerKeyItem>
@@ -31,7 +31,11 @@ export interface GradedSubmission {
   possible: number // EXCLUDES bonus
 }
 
+/** The three WEIGHT buckets (activity = papers/HW). Do not add to this. */
 export type ComponentType = 'activity' | 'quiz' | 'exam'
+
+/** An assessment's TYPE tag. 'homework' and 'activity' both grade in the activity (papers/HW) bucket. */
+export type AssessmentType = 'quiz' | 'homework' | 'activity' | 'exam'
 
 export interface ComponentWeights {
   activity: number
@@ -75,6 +79,8 @@ export interface PendingRow {
   email: string
   studentNumber: string
   className: string | null
+  /** Optional reason the student gave for joining (shown to the approver). */
+  reason: string | null
 }
 
 export interface AdminUserRow {
@@ -116,7 +122,9 @@ export interface SectionAssessmentMeta {
   /** The underlying assessment id — also the key used in SectionStudentRow.cells. */
   assessmentId: string
   title: string
-  type: 'activity' | 'quiz' | 'exam'
+  type: AssessmentType
+  /** False = ungraded (practice) — shown for feedback but excluded from marks. */
+  graded: boolean
   period: 'midterm' | 'final'
   /**
    * The assessment's maximum raw score (assessments.total_points).
@@ -177,13 +185,18 @@ export interface ClassDetailAssessment {
   assignmentId: string
   assessmentId: string
   title: string
-  type: 'activity' | 'quiz' | 'exam'
+  type: AssessmentType
+  isManual: boolean
+  /** False = ungraded/practice (doesn't count toward the grade). */
+  graded: boolean
   period: 'midterm' | 'final'
   active: boolean
   revealAnswers: boolean
   opensAt: string | null
   closesAt: string | null
   dueDate: string | null
+  /** Effective per-attempt time limit (assignment override → else assessment default; null = untimed). */
+  durationMinutes: number | null
 }
 
 export interface ClassDetailStudent {
@@ -208,6 +221,72 @@ export interface ClassDetail {
   }
   assessments: ClassDetailAssessment[]
   students: ClassDetailStudent[]
+}
+
+// ---------------------------------------------------------------------------
+// Student-facing views (Theme D)
+// ---------------------------------------------------------------------------
+
+/** One assessment as a student sees it — with their own submission status. */
+export interface StudentTask {
+  assignmentId: string
+  assessmentId: string
+  title: string
+  type: AssessmentType
+  period: 'midterm' | 'final'
+  isManual: boolean
+  /** False = ungraded/practice assessment (doesn't count toward the grade).
+   *  NOTE: distinct from `graded` below, which is whether THIS submission was graded. */
+  isGraded: boolean
+  active: boolean
+  revealAnswers: boolean
+  opensAt: string | null
+  closesAt: string | null
+  dueDate: string | null
+  /** Per-attempt time limit in minutes (null = untimed). */
+  durationMinutes: number | null
+  /** The student's submission, if any. */
+  submissionId: string | null
+  submitted: boolean
+  graded: boolean
+  /** Earned percentage when graded (else null). */
+  scorePct: number | null
+  /** When the student submitted (graded_at, else created_at); null if not submitted. */
+  submittedAt: string | null
+  /** True when answers are revealable to the student right now (gate satisfied). */
+  canReview: boolean
+}
+
+export interface StudentClassSummary {
+  classId: string
+  code: string
+  title: string
+  sectionLabel: string
+  period: string | null
+  tasks: StudentTask[]
+}
+
+export interface StudentOverview {
+  classes: StudentClassSummary[]
+}
+
+/** One class's read-only grade breakdown for the student's own grades page. */
+export interface StudentClassGrade {
+  classId: string
+  displayName: string
+  weights: { wtQuiz: number; wtPaper: number; wtExam: number }
+  assessments: SectionAssessmentMeta[]
+  cells: Record<string, number | null>
+  rawOverrides: Record<string, number>
+  midtermMark: number | null
+  finalMark: number | null
+  courseMark: number | null
+  letter: string | null
+  qp: number | null
+}
+
+export interface StudentGrades {
+  classes: StudentClassGrade[]
 }
 
 /** Full section gradebook returned by getSectionGrades. */
