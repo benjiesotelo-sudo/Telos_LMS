@@ -4,7 +4,7 @@ import { chromium } from 'playwright'
 import { mkdirSync } from 'fs'
 import { createClient } from '@supabase/supabase-js'
 
-const BASE = 'http://localhost:3100'
+const BASE = process.env.SMOKE_BASE || 'http://localhost:3100'
 const ADMIN_EMAIL = 'e2e-admin@local.test'
 const ADMIN_PASSWORD = 'E2e_admin_pass123!'
 
