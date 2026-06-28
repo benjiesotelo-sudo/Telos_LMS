@@ -11,6 +11,7 @@ interface Props {
   durationMinutes: number | null
   started: boolean
   deadline: string | null
+  initialAnswers: Record<string, string>
 }
 
 /**
@@ -18,7 +19,7 @@ interface Props {
  * student clicks "Start". Untimed quizzes, or a timed quiz already in progress
  * (resume), go straight to the form.
  */
-export default function TakeGate({ assignmentId, questions, timed, durationMinutes, started, deadline }: Props) {
+export default function TakeGate({ assignmentId, questions, timed, durationMinutes, started, deadline, initialAnswers }: Props) {
   const [phase, setPhase] = useState<'intro' | 'taking'>(timed && !started ? 'intro' : 'taking')
   const [liveDeadline, setLiveDeadline] = useState<string | null>(deadline)
   const [starting, setStarting] = useState(false)
@@ -55,5 +56,5 @@ export default function TakeGate({ assignmentId, questions, timed, durationMinut
     )
   }
 
-  return <TakeForm assignmentId={assignmentId} questions={questions} deadline={liveDeadline} />
+  return <TakeForm assignmentId={assignmentId} questions={questions} deadline={liveDeadline} initialAnswers={initialAnswers} />
 }

@@ -2,6 +2,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { submitAssessment } from '@/app/actions/submitAssessment'
+import { saveDraft } from '@/app/actions/draftAnswers'
 import type { Question } from '@/lib/types'
 import { isValidNumericInput } from '@/lib/utils/numeric'
 
@@ -10,6 +11,8 @@ interface Props {
   questions: Question[]
   /** ISO deadline for a timed attempt (null = untimed). */
   deadline?: string | null
+  /** Server-saved draft answers (cross-device resume); {} if none. */
+  initialAnswers?: Record<string, string>
 }
 
 const STORAGE_KEY = (id: string) => `telos-take-${id}`
@@ -22,9 +25,11 @@ function fmtRemaining(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`
 }
 
-export default function TakeForm({ assignmentId, questions, deadline = null }: Props) {
+export default function TakeForm({ assignmentId, questions, deadline = null, initialAnswers = {} }: Props) {
   const router = useRouter()
-  const [answers, setAnswers] = useState<Record<string, string>>({})
+  // Seed from the server draft (cross-device resume); localStorage fills in only if
+  // the server draft is empty (offline/same-device safety).
+  const [answers, setAnswers] = useState<Record<string, string>>(initialAnswers)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -35,18 +40,23 @@ export default function TakeForm({ assignmentId, questions, deadline = null }: P
     deadline ? Math.max(0, new Date(deadline).getTime() - Date.now()) : null,
   )
 
-  // Restore saved answers on mount
+  // Restore from localStorage on mount ONLY when there's no server draft (the server
+  // draft, seeded into state above, is authoritative for cross-device resume).
   useEffect(() => {
+    if (Object.keys(initialAnswers).length > 0) return
     try {
       const saved = localStorage.getItem(STORAGE_KEY(assignmentId))
       if (saved) setAnswers(JSON.parse(saved))
     } catch { /* ignore */ }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [assignmentId])
 
   const saveAnswers = useCallback((next: Record<string, string>) => {
     if (saveTimer.current) clearTimeout(saveTimer.current)
     saveTimer.current = setTimeout(() => {
+      // localStorage = instant/offline cache; server = cross-device resume.
       try { localStorage.setItem(STORAGE_KEY(assignmentId), JSON.stringify(next)) } catch { /* ignore */ }
+      saveDraft({ assignmentId, answers: next }).catch(() => { /* offline — localStorage still holds it */ })
     }, DEBOUNCE_MS)
   }, [assignmentId])
 
