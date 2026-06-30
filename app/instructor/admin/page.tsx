@@ -3,8 +3,10 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { listUsers } from '@/app/actions/admin/listUsers'
 import { listRemovalRequests } from '@/app/actions/removalRequests'
+import { listPasswordResetRequests } from '@/app/actions/passwordResetRequests'
 import { UsersPanel } from '@/app/instructor/UsersPanel'
 import { ReviewButtons } from '@/app/instructor/removals/ReviewButtons'
+import { ResetReviewButtons } from '@/app/instructor/admin/ResetReviewButtons'
 
 export default async function AdminControlsPage({
   searchParams,
@@ -27,7 +29,7 @@ export default async function AdminControlsPage({
   }
 
   const { tab: tabRaw } = await searchParams
-  const tab = tabRaw === 'removals' ? 'removals' : 'users'
+  const tab = tabRaw === 'removals' ? 'removals' : tabRaw === 'resets' ? 'resets' : 'users'
 
   const tabStyle = (active: boolean): React.CSSProperties => ({
     padding: '8px 16px',
@@ -45,14 +47,15 @@ export default async function AdminControlsPage({
   return (
     <div className="feu-page">
       <h1>Admin Controls</h1>
-      <p className="feu-page-sub">Manage user accounts and review student-removal requests.</p>
+      <p className="feu-page-sub">Manage user accounts and review student-removal and password-reset requests.</p>
 
       <div style={{ display: 'flex', gap: 4, borderBottom: '1px solid var(--border)', marginBottom: 18 }}>
         <Link href="/instructor/admin?tab=users" style={tabStyle(tab === 'users')}>Users</Link>
         <Link href="/instructor/admin?tab=removals" style={tabStyle(tab === 'removals')}>Removal requests</Link>
+        <Link href="/instructor/admin?tab=resets" style={tabStyle(tab === 'resets')}>Password resets</Link>
       </div>
 
-      {tab === 'users' ? <UsersTab /> : <RemovalsTab />}
+      {tab === 'users' ? <UsersTab /> : tab === 'removals' ? <RemovalsTab /> : <ResetsTab />}
     </div>
   )
 }
@@ -81,6 +84,27 @@ async function RemovalsTab() {
           <p style={{ margin: '0 0 6px' }}><strong>Reason:</strong> {r.reason}</p>
           <p className="feu-muted" style={{ fontSize: 12, margin: '0 0 12px' }}>Requested by {r.requestedByName ?? 'unknown'}</p>
           <ReviewButtons requestId={r.id} />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+async function ResetsTab() {
+  const requests = await listPasswordResetRequests()
+  if (requests.length === 0) return <p className="feu-muted">No pending password-reset requests.</p>
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      {requests.map((r) => (
+        <div key={r.id} className="feu-card">
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, marginBottom: 6 }}>
+            <h2 style={{ fontSize: 16, margin: 0 }}>{r.fullName}</h2>
+            <span className="feu-muted" style={{ fontSize: 12 }}>{r.studentNumber ?? '—'} · {r.email}</span>
+          </div>
+          <p className="feu-muted" style={{ fontSize: 12, margin: '0 0 12px' }}>
+            Requested a password reset. Approving sets the new password they chose and activates their account.
+          </p>
+          <ResetReviewButtons requestId={r.id} />
         </div>
       ))}
     </div>

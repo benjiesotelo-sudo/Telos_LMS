@@ -13,5 +13,17 @@ export async function adminResetPassword(input: { id: string; newPassword: strin
   const { error } = await admin.auth.admin.updateUserById(input.id, { password: input.newPassword })
   if (error) throw new Error(error.message)
 
+  // Restore access: an admin reset is meant to let the user back in. A student who
+  // self-registered is 'pending' and gateRoute parks them at /holding regardless of
+  // password — so resetting the password ALONE never unblocks them (the live-class bug).
+  // Re-activate any PENDING account here so a reset always yields a usable login. A
+  // deliberately 'suspended' account is left untouched (un-suspend via Edit user).
+  const { error: statusErr } = await admin
+    .from('profiles')
+    .update({ status: 'active' })
+    .eq('id', input.id)
+    .eq('status', 'pending')
+  if (statusErr) throw new Error(statusErr.message)
+
   return { ok: true }
 }

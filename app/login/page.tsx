@@ -1,5 +1,7 @@
 import { signIn } from './actions'
 import { ForgotPasswordForm } from './ForgotPasswordForm'
+import { RequestResetPanel } from './RequestResetPanel'
+import { PasswordInput } from '@/app/components/PasswordInput'
 
 export default async function LoginPage({
   searchParams,
@@ -30,11 +32,9 @@ export default async function LoginPage({
             </div>
             <div style={{ marginBottom: 16 }}>
               <label className="feu-label" htmlFor="password">Password</label>
-              <input
+              <PasswordInput
                 id="password"
-                className="feu-input"
                 name="password"
-                type="password"
                 required
                 autoComplete="current-password"
               />
@@ -49,6 +49,10 @@ export default async function LoginPage({
             {error ? <p className="feu-error">Invalid email or password.</p> : null}
           </form>
         </div>
+        {/* Primary, email-free recovery: student chooses a new password, instructor approves.
+            Auto-opens after a failed sign-in. */}
+        <RequestResetPanel defaultOpen={!!error} />
+        {/* Secondary: email-based reset (kept for instructors/admins). */}
         <ForgotPasswordForm />
       </div>
     </>

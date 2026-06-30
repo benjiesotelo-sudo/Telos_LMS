@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { registerViaLink } from '@/app/actions/registerViaLink'
+import { PasswordInput } from '@/app/components/PasswordInput'
 
 const PREFIX_OPTIONS = ['', 'Mr.', 'Ms.', 'Mrs.', 'Dr.', 'Engr.', 'Atty.', 'Other']
 const SUFFIX_OPTIONS = ['', 'Jr.', 'Sr.', 'II', 'III', 'IV', 'Other']
@@ -18,6 +19,7 @@ export function RegisterForm({ token, kind, sections }: {
   const [email, setEmail] = useState('')
   const [studentNumber, setStudentNumber] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [classId, setClassId] = useState('')
   const [reason, setReason] = useState('')
   const [msg, setMsg] = useState('')
@@ -32,10 +34,14 @@ export function RegisterForm({ token, kind, sections }: {
     lastName.trim() !== '' &&
     email.trim() !== '' &&
     password !== '' &&
+    confirmPassword !== '' &&
     studentNumber.trim() !== ''
 
   async function onSubmit() {
-    setBusy(true); setMsg('')
+    setMsg('')
+    if (password.length < 6) { setMsg('Password must be at least 6 characters.'); return }
+    if (password !== confirmPassword) { setMsg('Passwords do not match.'); return }
+    setBusy(true)
     try {
       await registerViaLink({
         token,
@@ -125,8 +131,17 @@ export function RegisterForm({ token, kind, sections }: {
 
       {/* Password */}
       <label className="feu-label" htmlFor="r-pw">Password <span style={{ color: 'var(--feu-gold)' }}>*</span></label>
-      <input id="r-pw" className="feu-input" type="password" value={password}
-        onChange={(e) => setPassword(e.target.value)} />
+      <PasswordInput id="r-pw" value={password}
+        onChange={(e) => setPassword(e.target.value)} autoComplete="new-password" minLength={6} />
+      <p className="feu-muted" style={{ fontSize: '0.78rem', marginTop: 2 }}>At least 6 characters — tap “Show” to check what you typed.</p>
+
+      {/* Confirm Password — always masked, so you retype it from memory and catch typos */}
+      <label className="feu-label" htmlFor="r-pw2">Confirm Password <span style={{ color: 'var(--feu-gold)' }}>*</span></label>
+      <input id="r-pw2" className="feu-input" type="password" autoComplete="new-password" value={confirmPassword}
+        onChange={(e) => setConfirmPassword(e.target.value)} />
+      {confirmPassword !== '' && password !== confirmPassword && (
+        <p className="feu-error" style={{ fontSize: '0.78rem', marginTop: 2 }}>Passwords don’t match yet.</p>
+      )}
 
       {/* Section picker (general links only) */}
       {kind === 'general' && (
