@@ -20,16 +20,14 @@ async function authedStudentId(): Promise<string> {
 }
 
 /** Reveal gate, mirrors getRevealedAnswers: graded + reveal_answers + close gate.
- *  Activities reveal immediately; quizzes/exams/homework reveal when there's no close
- *  time, or once a set close time has passed (only a FUTURE close holds them back). */
+ *  Same rule for every type: reveal when there's no close time, or once a set close
+ *  time has passed (only a FUTURE close holds answers back). */
 function revealable(
-  type: string,
   revealAnswers: boolean,
   closesAt: string | null,
   graded: boolean,
 ): boolean {
   if (!graded || !revealAnswers) return false
-  if (type === 'activity') return true
   return closesAt == null || new Date(closesAt) <= new Date()
 }
 
@@ -142,7 +140,7 @@ function buildTask(a: any, subMap: Map<string, any>, overrideMap: Map<string, nu
     graded,
     scorePct,
     submittedAt: sub?.submittedAt ?? null,
-    canReview: revealable(type, a.reveal_answers === true, a.closes_at ?? null, graded),
+    canReview: revealable(a.reveal_answers === true, a.closes_at ?? null, graded),
   }
 }
 

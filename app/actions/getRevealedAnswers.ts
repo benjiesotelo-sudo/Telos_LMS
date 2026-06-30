@@ -21,11 +21,9 @@ export interface RevealedAnswersResult {
  *   - The answer key is returned ONLY when the reveal gate passes:
  *       1. assignment.reveal_answers === true        (instructor toggle)
  *       2. submission.status === 'graded'
- *       3. Close gate:
- *            • activity → reveals immediately (always)
- *            • quiz / exam / homework → reveals when there is NO closes_at, OR once a set
- *              closes_at has passed. Only a FUTURE closes_at holds answers back (so
- *              classmates still taking the same assessment aren't shown answers early).
+ *       3. Close gate (SAME for every type — quiz/exam/homework/activity): reveals when
+ *          there is NO closes_at, OR once a set closes_at has passed. Only a FUTURE
+ *          closes_at holds answers back (so classmates still taking aren't shown early).
  *   - When the gate fails the function returns null — the key is never read.
  *   - The answer key is read EXCLUSIVELY via the service-role admin client
  *     (assessment_keys has zero public RLS policies).
@@ -60,27 +58,20 @@ export async function getRevealedAnswers(input: {
   // ── 4. Load the assignment ────────────────────────────────────────────────
   const { data: assignment, error: asgErr } = await admin
     .from('assignments')
-    .select('assessment_id, reveal_answers, closes_at, assessment:assessment_id(type)')
+    .select('assessment_id, reveal_answers, closes_at')
     .eq('id', submission.assignment_id)
     .single()
 
   if (asgErr || !assignment) throw new Error('Assignment not found')
 
-  // ── 5. Gate — reveal ──────────────────────────────────────────────────────
-  // Activities reveal as soon as they're graded. Quizzes/exams/homework reveal when
-  // there is NO close time, or once a set close time has passed — only a FUTURE close
-  // holds answers back (so classmates still taking aren't shown answers early). The
-  // instructor toggle gates everything.
-  const assessmentType = ((assignment as any).assessment?.type ?? 'quiz') as
-    | 'activity'
-    | 'quiz'
-    | 'exam'
-    | 'homework'
+  // ── 5. Gate — reveal (same rule for ALL types) ───────────────────────────
+  // Reveal when there's no close time, or once a set close time has passed — only a
+  // FUTURE close holds answers back (so classmates still taking aren't shown early).
+  // The instructor's Reveal toggle + the graded + ownership checks safeguard everything.
   const revealEnabled = assignment.reveal_answers === true
   const isGraded = submission.status === 'graded'
-  const noCloseOrPassed =
+  const closeSatisfied =
     assignment.closes_at == null || new Date(assignment.closes_at) <= new Date()
-  const closeSatisfied = assessmentType === 'activity' ? true : noCloseOrPassed
 
   if (!revealEnabled || !isGraded || !closeSatisfied) {
     return null

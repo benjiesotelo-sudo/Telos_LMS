@@ -21,12 +21,11 @@ export function AssignmentMetaControls({ assignment }: AssignmentMetaControlsPro
   const initialDuration = assignment.durationMinutes != null ? String(assignment.durationMinutes) : ''
   const [duration, setDuration] = useState(initialDuration)
 
-  // Reveal gate (mirrors getRevealedAnswers): for a quiz/exam/homework, answers reveal
-  // immediately when there's no Closes time, or once a set Closes time has passed. Only a
-  // FUTURE Closes time holds them back — note that to the instructor so it's not a surprise.
+  // Reveal gate (mirrors getRevealedAnswers): for ANY type, answers reveal immediately when
+  // there's no Closes time, or once a set Closes time has passed. Only a FUTURE Closes time
+  // holds them back — note that to the instructor so it's not a surprise.
   const revealHeldUntilClose =
     revealAnswers &&
-    assignment.type !== 'activity' &&
     closesAt !== '' &&
     new Date(closesAt) > new Date()
 
