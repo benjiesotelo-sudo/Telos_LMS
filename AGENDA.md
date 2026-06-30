@@ -43,11 +43,11 @@ The product is **feature-complete and live**. As of 2026-06-30 the password/logi
 - ✅ Deployed in order: `supabase db push` (cloud 0019 → **0020**, verified) → `git push origin main` (Vercel) → prod health-checked, new reset panel live on `/login`.
 - 🔲 _Remaining: the prod spot-check on real data (see §5)._
 
-### 2. Supabase ops 👤 _(dashboard / SQL Editor — Claude can prep ready-to-paste SQL)_
-- 🔲 Schedule `purge_expired_pending()` via **pg_cron** (auto-cleans stale >7-day pending signups).
-- 🔲 **Unique index on `profiles.student_number`** _(could be migration 0021 — needs a duplicate-check first, or it fails on existing dupes)._
-- 🔲 Keep public signups OFF / ensure `handle_new_user` forces `role=student` (no self-promotion on cloud signup).
-- 🔲 Save admin SQL snippets in the dashboard: **List Users · Clean Test Data · Health Check · 1st Setup**.
+### 2. Supabase ops 👤 _(paste-ready SQL + steps now in `docs/supabase-ops.md`)_
+- 🔲 **Unique index on `profiles.student_number`** — migration `0021` written + validated locally; **cloud still 0020**. Run the §1 pre-flight dup-check in your dashboard → if 0 rows, `supabase db push` applies it.
+- 🔲 Schedule `purge_expired_pending()` via **pg_cron** — paste-ready SQL in §2.
+- 🔲 Turn **public signup OFF** (Dashboard → Auth → Email → "Allow new users to sign up") — §3. _Does not affect enrollment-link registration._
+- 🔲 Save the 4 admin SQL snippets (List Users · Health Check · Clean Test Data · 1st Setup) — §4.
 
 ### 3. Housekeeping
 - ✅ Deleted merged branches `feat/theme-d-student` + `polish/student-ux-feu-theme` (2026-06-30).

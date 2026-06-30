@@ -22,7 +22,7 @@ EDITED: `app/actions/admin/adminResetPassword.ts`, `app/login/page.tsx`, `app/re
 ### TO DO next
 1. ✅ **Committed + deployed** — cloud at 0020, code live; the 2026-06-29 UI fixes shipped in the same batch.
 2. **Spot-check on prod** (real data): log in as yourself + as a student; try the admin **"Reset PW"** on a pending student, and the student **"Request a password reset"** → approve in **Admin Controls → Password resets**.
-3. **Supabase ops still pending** (your hands — see `AGENDA.md` §2): pg_cron `purge_expired_pending()`; unique index on `profiles.student_number`; signups locked to `role=student`; saved admin SQL snippets.
+3. **Supabase ops** — paste-ready SQL now in **`docs/supabase-ops.md`**. Migration `0021` (student_number unique index) is written + validated locally but **NOT applied to cloud** (cloud still 0020): run the §1 pre-flight dup-check first, then `supabase db push`. Still your-hands (dashboard): pg_cron purge, signup-OFF toggle, saved snippets.
 4. Optional: the old email-based "Forgot password?" link is still on the login page (kept for instructor/admin recovery, below the new student flow). Decide whether to keep both.
 
 ---
