@@ -34,6 +34,9 @@ The product is **feature-complete and live**. As of 2026-06-30 the password/logi
 - ✅ **Student request-reset flow** (email-free, instructor-approved) — locked-out student picks a new password → lands in **Admin Controls → Password resets** → you Approve/Reject. Migration `0020`.
 - **Verification:** 302/302 tests · build clean · typecheck clean · 16-agent adversarial review → 4 real findings fixed · cloud 0020 + prod health-checked (new reset panel confirmed live).
 
+### Also 2026-06-30 · Search/filter rollout ✅ _(shipped)_
+- ✅ Reusable `SearchBox`; live search added to **Pending registrations · class roster · Grade Sheet + Editor · Assessments · Courses & Sections · student Dashboard/Classes/Grades** (Users already had it). Pure UI, no migration. Verified: build · 302 tests · adversarial review → 0 findings.
+
 ---
 
 ## 🔲 Remaining

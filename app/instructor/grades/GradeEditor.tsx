@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { setGradeOverrides } from '@/app/actions/setGradeOverrides'
 import { computeStudentMarks, type MarkAssessment } from '@/lib/gradebook'
 import type { SectionGrades, SectionAssessmentMeta, SectionStudentRow } from '@/lib/types'
+import { SearchBox } from '@/app/components/SearchBox'
 import {
   scoreColor,
   letterColor,
@@ -65,6 +66,14 @@ function EditorGrid({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [msg, setMsg] = useState<string | null>(null)
+
+  // Filters only which rows are rendered — never touches edits/entries/dirty/destructive,
+  // so filtered-out rows keep their pending edits and the save count reflects ALL edits.
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const matches = (s: SectionStudentRow) =>
+    q === '' || [s.fullName, s.studentNumber].some((v) => (v ?? '').toLowerCase().includes(q))
+  const visible = students.filter(matches)
 
   // --- per-cell value helpers ---
   function savedRaw(stu: SectionStudentRow, a: SectionAssessmentMeta): string {
@@ -256,6 +265,15 @@ function EditorGrid({
         </span>
       </div>
 
+      {students.length > 0 && assessments.length > 0 && (
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          placeholder="Search students by name or student #…"
+          ariaLabel="Search students"
+        />
+      )}
+
       {students.length === 0 && <p className="feu-muted">No students enrolled in this section.</p>}
       {students.length > 0 && assessments.length === 0 && (
         <p className="feu-muted">No assessments assigned yet.</p>
@@ -301,7 +319,14 @@ function EditorGrid({
                 </tr>
               </thead>
               <tbody>
-                {students.map((stu, i) => {
+                {visible.length === 0 && (
+                  <tr>
+                    <td colSpan={mSpan + fSpan + 4} style={{ ...tdStyle, textAlign: 'center', color: 'var(--gray)' }}>
+                      No students match &ldquo;{query}&rdquo;.
+                    </td>
+                  </tr>
+                )}
+                {visible.map((stu, i) => {
                   const rowBg = i % 2 === 0 ? '#fff' : '#f8fbf9'
                   const m = marksFor(stu)
                   return (

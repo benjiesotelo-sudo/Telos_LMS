@@ -2,6 +2,8 @@ import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { listClasses } from '@/app/actions/listClasses'
+import { CourseList } from './CourseList'
+import { SectionList } from './SectionList'
 
 export default async function ClassesPage({
   searchParams,
@@ -51,42 +53,7 @@ export default async function ClassesPage({
           <h2 id="courses-list-h" style={{ fontSize: 16, marginBottom: 14, color: 'var(--green)' }}>
             Your Courses
           </h2>
-          {courses.length === 0 && (
-            <p className="feu-muted">
-              No courses yet —{' '}
-              <Link href="/instructor/builder" style={{ color: 'var(--green)' }}>
-                create one in Course Builder
-              </Link>
-              .
-            </p>
-          )}
-          {courses.map((co) => (
-            <Link
-              key={co.courseId}
-              href={`/instructor/classes?course=${co.courseId}`}
-              style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '10px 0',
-                borderBottom: '1px solid var(--line, #eee)',
-                textDecoration: 'none',
-                color: 'inherit',
-              }}
-            >
-              <span>
-                <span style={{ fontWeight: 600 }}>{co.code}</span>
-                {co.title ? (
-                  <span className="feu-muted" style={{ marginLeft: 8 }}>
-                    {co.title}
-                  </span>
-                ) : null}
-              </span>
-              <span className="feu-muted" style={{ fontSize: 13 }}>
-                {co.sectionCount} section{co.sectionCount !== 1 ? 's' : ''} &rarr;
-              </span>
-            </Link>
-          ))}
+          <CourseList courses={courses} />
         </section>
       </div>
     )
@@ -116,30 +83,7 @@ export default async function ClassesPage({
         <h2 id="sections-list-h" style={{ fontSize: 16, marginBottom: 14, color: 'var(--green)' }}>
           Sections
         </h2>
-        {sections.length === 0 && (
-          <p className="feu-muted">No sections in this course yet.</p>
-        )}
-        {sections.map((c) => (
-          <Link
-            key={c.id}
-            href={`/instructor/classes/${c.id}`}
-            style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              padding: '8px 0',
-              borderBottom: '1px solid var(--line, #eee)',
-              textDecoration: 'none',
-              color: 'inherit',
-            }}
-          >
-            <span style={{ fontWeight: 600 }}>{c.displayName}</span>
-            <span className="feu-muted" style={{ fontSize: 13 }}>
-              {c.period}
-              {c.pic ? ` · ${c.pic}` : ''}
-            </span>
-          </Link>
-        ))}
+        <SectionList sections={sections.map((c) => ({ id: c.id, displayName: c.displayName, period: c.period, pic: c.pic }))} />
       </section>
     </div>
   )

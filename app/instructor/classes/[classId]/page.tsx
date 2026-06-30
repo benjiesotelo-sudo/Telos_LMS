@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation'
 import { createClient } from '@/lib/supabase/server'
 import { getClassDetail } from '@/app/actions/getClassDetail'
 import { getClassRemovalRequests } from '@/app/actions/removalRequests'
-import { RemoveStudent } from './RemoveStudent'
+import { RosterTable } from './RosterTable'
 import { typeName } from '@/lib/assessmentType'
 import { AssignmentMetaControls } from '@/app/instructor/AssignmentMetaControls'
 import { ClassWeightsForm } from '@/app/instructor/ClassWeightsForm'
@@ -47,6 +47,7 @@ export default async function ClassDetailPage({
   // Pending removal requests for this class → student ids (so the roster shows status).
   const removalReqs = await getClassRemovalRequests({ classId: cls.id })
   const pendingRemoval = new Set(removalReqs.filter((r) => r.status === 'pending').map((r) => r.studentId))
+  const pendingRemovalIds = [...pendingRemoval]
 
   return (
     <div className="feu-page">
@@ -139,53 +140,7 @@ export default async function ClassDetailPage({
           Students ({students.length})
         </h2>
 
-        {students.length === 0 && (
-          <p className="feu-muted">No students enrolled yet.</p>
-        )}
-
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-            <thead>
-              <tr style={{ background: '#f1f7f3' }}>
-                <th style={thStyle}>Name</th>
-                <th style={thStyle}>Student #</th>
-                <th style={thStyle}>Email</th>
-                <th style={thStyle}>Status</th>
-                <th style={thStyle}>Manage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {students.map((stu) => (
-                <tr key={stu.studentId} style={{ borderBottom: '1px solid var(--line, #eee)' }}>
-                  <td style={tdStyle}>{stu.fullName || <span className="feu-muted">—</span>}</td>
-                  <td style={tdStyle}>{stu.studentNumber ?? <span className="feu-muted">—</span>}</td>
-                  <td style={tdStyle}>{stu.email}</td>
-                  <td style={tdStyle}>
-                    <span
-                      style={{
-                        fontSize: 11,
-                        fontWeight: 600,
-                        textTransform: 'uppercase',
-                        letterSpacing: '0.5px',
-                        color: stu.status === 'active' ? 'var(--green)' : 'var(--gray)',
-                      }}
-                    >
-                      {stu.status}
-                    </span>
-                  </td>
-                  <td style={tdStyle}>
-                    <RemoveStudent
-                      classId={cls.id}
-                      studentId={stu.studentId}
-                      studentName={stu.fullName || stu.email}
-                      pending={pendingRemoval.has(stu.studentId)}
-                    />
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <RosterTable students={students} pendingRemovalIds={pendingRemovalIds} classId={cls.id} />
 
         <InviteStudent classId={cls.id} />
       </section>
@@ -219,20 +174,4 @@ export default async function ClassDetailPage({
       </section>
     </div>
   )
-}
-
-const thStyle: React.CSSProperties = {
-  textAlign: 'left',
-  padding: '7px 10px',
-  fontWeight: 600,
-  fontSize: 11,
-  textTransform: 'uppercase',
-  letterSpacing: '0.5px',
-  color: '#3c5a48',
-  borderBottom: '1px solid var(--line, #eee)',
-}
-
-const tdStyle: React.CSSProperties = {
-  padding: '8px 10px',
-  color: 'var(--ink)',
 }

@@ -1,6 +1,8 @@
 'use client'
+import { useState } from 'react'
 import type { SectionGrades, SectionAssessmentMeta } from '@/lib/types'
 import { scoreColor, letterColor, typeTag, typeBg, splitPeriods, MANUAL_TINT } from './gradeStyles'
+import { SearchBox } from '@/app/components/SearchBox'
 
 // One read-only assessment cell. `isManual` → amber tint + dot.
 function ReadCell({
@@ -80,6 +82,12 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
   const fSpan = finalCols.length + 1
   const { wtQuiz, wtPaper, wtExam } = cls.weights
 
+  const [query, setQuery] = useState('')
+  const q = query.trim().toLowerCase()
+  const matches = (s: SectionGrades['students'][number]) =>
+    q === '' || [s.fullName, s.studentNumber].some((v) => (v ?? '').toLowerCase().includes(q))
+  const visible = students.filter(matches)
+
   function colHeader(a: SectionAssessmentMeta, isFirst: boolean) {
     return (
       <th
@@ -128,6 +136,15 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
           </button>
         )}
       </div>
+
+      {students.length > 0 && assessments.length > 0 && (
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          placeholder="Search students by name or student #…"
+          ariaLabel="Search students"
+        />
+      )}
 
       <div
         style={{
@@ -201,7 +218,14 @@ export function GradeSheet({ grades }: { grades: SectionGrades }) {
               </tr>
             </thead>
             <tbody>
-              {students.map((stu, i) => {
+              {visible.length === 0 && (
+                <tr>
+                  <td colSpan={mSpan + fSpan + 4} style={{ ...tdStyle, textAlign: 'center', color: 'var(--gray)' }}>
+                    No students match &ldquo;{query}&rdquo;.
+                  </td>
+                </tr>
+              )}
+              {visible.map((stu, i) => {
                 const rowBg = i % 2 === 0 ? '#fff' : '#f8fbf9'
                 return (
                   <tr key={stu.studentId} style={{ background: rowBg, borderBottom: '1px solid var(--border)' }}>

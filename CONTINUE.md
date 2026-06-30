@@ -25,6 +25,9 @@ EDITED: `app/actions/admin/adminResetPassword.ts`, `app/login/page.tsx`, `app/re
 3. **Supabase ops** — paste-ready SQL now in **`docs/supabase-ops.md`**. Migration `0021` (student_number unique index) is written + validated locally but **NOT applied to cloud** (cloud still 0020): run the §1 pre-flight dup-check first, then `supabase db push`. Still your-hands (dashboard): pg_cron purge, signup-OFF toggle, saved snippets.
 4. Optional: the old email-based "Forgot password?" link is still on the login page (kept for instructor/admin recovery, below the new student flow). Decide whether to keep both.
 
+## 🔎 Search/filter rollout (2026-06-30) — SHIPPED
+Added a reusable `app/components/SearchBox.tsx` and wired live search/filter into every meaningful list: **Pending registrations**, **class roster**, **Grade Sheet + Grade Editor** (filters rows only — editor save-state/▾count/MG-FG preview untouched), **Assessments list**, **Courses & Sections**, and the **student Dashboard (To-Do/Done) / Classes / Grades**. (Users table already had search.) Server-component lists were extracted into small `'use client'` components: `RosterTable`, `AssessmentsList`, `CourseList`, `SectionList`, `ClassesList`, `GradesList`. Pure UI — **no migration**. Verified: build clean · 302 tests · multi-agent adversarial review → **0 findings**. The "submissions list" idea was dropped — `SubmissionsPanel` is dead code, superseded by the grade sheet.
+
 ---
 
 ## ▶▶ (prior) NEXT SESSION — RESUME HERE (set 2026-06-29 PM, after FIRST LIVE CLASS TEST) — reset/login items SUPERSEDED by the 2026-06-30 section above

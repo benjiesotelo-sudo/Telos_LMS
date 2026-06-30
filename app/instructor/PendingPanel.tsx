@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import { approvePending } from '@/app/actions/approvePending'
 import { rejectPending } from '@/app/actions/rejectPending'
+import { SearchBox } from '@/app/components/SearchBox'
 import type { PendingRow } from '@/lib/types'
 
 interface ClassOption { id: string; displayName: string }
@@ -13,6 +14,12 @@ export function PendingPanel({ rows, classes }: { rows: PendingRow[]; classes: C
   const [done, setDone] = useState<Record<string, string>>({})
   const [busy, setBusy] = useState<Record<string, string>>({})
   const [pickedClass, setPickedClass] = useState<Record<string, string>>({})
+  const [query, setQuery] = useState('')
+
+  const q = query.trim().toLowerCase()
+  const matches = (r: PendingRow) =>
+    q === '' ||
+    [r.fullName, r.studentNumber, r.email, r.className].some((v) => (v ?? '').toLowerCase().includes(q))
 
   async function act(id: string, fn: () => Promise<unknown>, pendingLabel: string, doneLabel: string) {
     setBusy((b) => ({ ...b, [id]: pendingLabel }))
@@ -22,8 +29,10 @@ export function PendingPanel({ rows, classes }: { rows: PendingRow[]; classes: C
   }
 
   // Two meaningful groups: those who still need a section, and those who already joined one.
-  const needsSection = rows.filter((r) => r.className == null)
-  const joined = rows.filter((r) => r.className != null)
+  // Both honor the active search query.
+  const needsSection = rows.filter((r) => r.className == null && matches(r))
+  const joined = rows.filter((r) => r.className != null && matches(r))
+  const noMatches = rows.length > 0 && q !== '' && needsSection.length === 0 && joined.length === 0
 
   function Row({ r, unplaced }: { r: PendingRow; unplaced: boolean }) {
     const chosen = pickedClass[r.studentId] ?? ''
@@ -85,6 +94,16 @@ export function PendingPanel({ rows, classes }: { rows: PendingRow[]; classes: C
     <section aria-labelledby="pending-h" className="feu-card">
       <h2 id="pending-h" style={{ fontSize: 16, marginBottom: 14, color: 'var(--green)' }}>Pending Registrations</h2>
       {rows.length === 0 && <p className="feu-muted">None pending.</p>}
+
+      {rows.length > 0 && (
+        <SearchBox
+          value={query}
+          onChange={setQuery}
+          placeholder="Search pending by name, student #, email, or section…"
+          ariaLabel="Search pending registrations"
+        />
+      )}
+      {noMatches && <p className="feu-muted">No pending registrations match &ldquo;{query}&rdquo;.</p>}
 
       {needsSection.length > 0 && (
         <div style={{ marginBottom: joined.length > 0 ? 18 : 0 }}>
