@@ -245,9 +245,10 @@ describe('getRevealedAnswers', () => {
   })
 })
 
-// ─── Type-aware reveal: homework reveals immediately; quiz/exam need close ────
+// ─── Close gate: activity always immediate; quiz/exam/homework reveal when no close ──
+//     is set OR a set close has passed (only a FUTURE close holds answers back). ────────
 
-describe('getRevealedAnswers — type-aware close gate', () => {
+describe('getRevealedAnswers — close gate', () => {
   it('HOMEWORK (activity): reveals immediately when graded + reveal=true, NO close date', async () => {
     const submissionId = await seedScenario({
       studentId: stuOwner.id,
@@ -276,11 +277,25 @@ describe('getRevealedAnswers — type-aware close gate', () => {
     expect(result).not.toBeNull()
   })
 
-  it('QUIZ: returns null when graded + reveal=true but NO close date set', async () => {
+  it('QUIZ: reveals immediately when graded + reveal=true and NO close date set', async () => {
     const submissionId = await seedScenario({
       studentId: stuOwner.id,
       revealAnswers: true,
-      closesAt: null,            // quiz with no close → never reveals
+      closesAt: null,            // quiz with no close → reveals immediately (new rule)
+      status: 'graded',
+    })
+    await setTestUser(stuOwner.email, PW)
+    const result = await getRevealedAnswers({ submissionId })
+    expect(result).not.toBeNull()
+    expect(result!.correctAnswers['q1'].value).toBe('2')
+  })
+
+  it('QUIZ: a FUTURE close date still holds answers back (returns null)', async () => {
+    const futureClose = new Date(Date.now() + 3_600_000).toISOString()
+    const submissionId = await seedScenario({
+      studentId: stuOwner.id,
+      revealAnswers: true,
+      closesAt: futureClose,
       status: 'graded',
     })
     await setTestUser(stuOwner.email, PW)

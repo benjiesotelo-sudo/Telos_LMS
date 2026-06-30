@@ -19,7 +19,9 @@ async function authedStudentId(): Promise<string> {
   return auth.user.id
 }
 
-/** Reveal gate, mirrors getRevealedAnswers: graded + reveal_answers + (activity | closed). */
+/** Reveal gate, mirrors getRevealedAnswers: graded + reveal_answers + close gate.
+ *  Activities reveal immediately; quizzes/exams/homework reveal when there's no close
+ *  time, or once a set close time has passed (only a FUTURE close holds them back). */
 function revealable(
   type: string,
   revealAnswers: boolean,
@@ -28,7 +30,7 @@ function revealable(
 ): boolean {
   if (!graded || !revealAnswers) return false
   if (type === 'activity') return true
-  return closesAt != null && new Date(closesAt) <= new Date()
+  return closesAt == null || new Date(closesAt) <= new Date()
 }
 
 interface RawClass {

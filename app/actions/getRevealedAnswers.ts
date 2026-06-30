@@ -21,9 +21,11 @@ export interface RevealedAnswersResult {
  *   - The answer key is returned ONLY when the reveal gate passes:
  *       1. assignment.reveal_answers === true        (instructor toggle)
  *       2. submission.status === 'graded'
- *       3. TYPE-AWARE close gate:
- *            • homework / activity → reveals immediately (no close required)
- *            • quiz / exam         → only after closes_at is set AND in the past
+ *       3. Close gate:
+ *            • activity → reveals immediately (always)
+ *            • quiz / exam / homework → reveals when there is NO closes_at, OR once a set
+ *              closes_at has passed. Only a FUTURE closes_at holds answers back (so
+ *              classmates still taking the same assessment aren't shown answers early).
  *   - When the gate fails the function returns null — the key is never read.
  *   - The answer key is read EXCLUSIVELY via the service-role admin client
  *     (assessment_keys has zero public RLS policies).
@@ -64,19 +66,21 @@ export async function getRevealedAnswers(input: {
 
   if (asgErr || !assignment) throw new Error('Assignment not found')
 
-  // ── 5. Gate — type-aware reveal ───────────────────────────────────────────
-  // Homework (activity) reveals as soon as it's graded; quizzes & exams reveal
-  // only after their close date passes (so students can't share answers while
-  // others are still taking it). The instructor toggle gates everything.
+  // ── 5. Gate — reveal ──────────────────────────────────────────────────────
+  // Activities reveal as soon as they're graded. Quizzes/exams/homework reveal when
+  // there is NO close time, or once a set close time has passed — only a FUTURE close
+  // holds answers back (so classmates still taking aren't shown answers early). The
+  // instructor toggle gates everything.
   const assessmentType = ((assignment as any).assessment?.type ?? 'quiz') as
     | 'activity'
     | 'quiz'
     | 'exam'
+    | 'homework'
   const revealEnabled = assignment.reveal_answers === true
   const isGraded = submission.status === 'graded'
-  const isClosed =
-    assignment.closes_at != null && new Date(assignment.closes_at) <= new Date()
-  const closeSatisfied = assessmentType === 'activity' ? true : isClosed
+  const noCloseOrPassed =
+    assignment.closes_at == null || new Date(assignment.closes_at) <= new Date()
+  const closeSatisfied = assessmentType === 'activity' ? true : noCloseOrPassed
 
   if (!revealEnabled || !isGraded || !closeSatisfied) {
     return null

@@ -21,13 +21,14 @@ export function AssignmentMetaControls({ assignment }: AssignmentMetaControlsPro
   const initialDuration = assignment.durationMinutes != null ? String(assignment.durationMinutes) : ''
   const [duration, setDuration] = useState(initialDuration)
 
-  // Reveal gate (mirrors getRevealedAnswers): for a quiz/exam, answers only show
-  // to students AFTER the Closes time has passed. With reveal on but no past close
-  // date, the toggle silently does nothing — warn the instructor.
-  const revealNeedsClose =
+  // Reveal gate (mirrors getRevealedAnswers): for a quiz/exam/homework, answers reveal
+  // immediately when there's no Closes time, or once a set Closes time has passed. Only a
+  // FUTURE Closes time holds them back — note that to the instructor so it's not a surprise.
+  const revealHeldUntilClose =
     revealAnswers &&
     assignment.type !== 'activity' &&
-    (closesAt === '' || new Date(closesAt) > new Date())
+    closesAt !== '' &&
+    new Date(closesAt) > new Date()
 
   // Saves ONLY the time limit (independent of the date fields). Blank = untimed.
   function saveDuration() {
@@ -161,8 +162,8 @@ export function AssignmentMetaControls({ assignment }: AssignmentMetaControlsPro
         )}
       </div>
 
-      {/* Reveal gate warning — quizzes/exams only reveal after the Closes time. */}
-      {revealNeedsClose && (
+      {/* Reveal note — a FUTURE Closes time delays reveal until it passes. */}
+      {revealHeldUntilClose && (
         <div
           style={{
             fontSize: 12,
@@ -173,9 +174,9 @@ export function AssignmentMetaControls({ assignment }: AssignmentMetaControlsPro
             padding: '6px 10px',
           }}
         >
-          ⚠️ Reveal Answers is on, but a {assignment.type} only shows answers to students{' '}
-          <strong>after the “Closes” time has passed</strong>. Set a Closes date/time in the
-          past below to reveal now.
+          ℹ️ Reveal Answers is on. Students will see the correct answers{' '}
+          <strong>after the “Closes” time passes</strong>. Clear the Closes time to reveal
+          immediately when they submit.
         </div>
       )}
 
