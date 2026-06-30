@@ -7,13 +7,14 @@ export function CoursePanel() {
   const [title, setTitle] = useState('')
   const [description, setDescription] = useState('')
   const [msg, setMsg] = useState('')
+  const [createdCode, setCreatedCode] = useState('')
   const [busy, setBusy] = useState(false)
 
   async function onCreate() {
-    setBusy(true); setMsg('')
+    setBusy(true); setMsg(''); setCreatedCode('')
     try {
       await createCourse({ code, title, description })
-      setMsg(`Created ${code}`); setCode(''); setTitle(''); setDescription('')
+      setCreatedCode(code); setCode(''); setTitle(''); setDescription('')
     } catch (e) {
       setMsg(`Failed: ${e instanceof Error ? e.message : String(e)}`)
     } finally { setBusy(false) }
@@ -33,7 +34,30 @@ export function CoursePanel() {
           {busy ? 'Creating…' : 'Create course'}
         </button>
       </div>
-      {msg && <p role="status" className={msg.startsWith('Failed') ? 'feu-error' : 'feu-muted'} style={{ marginTop: 10 }}>{msg}</p>}
+      {msg && <p role="status" className="feu-error" style={{ marginTop: 10 }}>{msg}</p>}
+      {createdCode && (
+        <div
+          role="status"
+          style={{
+            marginTop: 12,
+            padding: '12px 14px',
+            borderRadius: 8,
+            border: '1px solid var(--green)',
+            background: 'rgba(0,128,0,0.06)',
+          }}
+        >
+          <div style={{ fontWeight: 600, color: 'var(--green)', marginBottom: 4 }}>
+            ✓ Course {createdCode} created
+          </div>
+          <div className="feu-muted" style={{ fontSize: 13, marginBottom: 8 }}>
+            One more step before you can enroll students: add a <strong>class section</strong> for
+            this course. Enrollment links attach to a section, not the course itself.
+          </div>
+          <a href="#new-class" className="feu-btn-green" style={{ display: 'inline-block', textDecoration: 'none' }}>
+            Add a class section →
+          </a>
+        </div>
+      )}
     </section>
   )
 }

@@ -23,7 +23,7 @@ export function ClassPanel({ courses, pics }: { courses: { id: string; code: str
   }
 
   return (
-    <section aria-labelledby="class-h" className="feu-card">
+    <section id="new-class" aria-labelledby="class-h" className="feu-card">
       <h2 id="class-h" style={{ fontSize: 16, marginBottom: 14, color: 'var(--green)' }}>New Class (Section)</h2>
       <label className="feu-label" htmlFor="cl-course">Course</label>
       <select id="cl-course" className="feu-input" value={courseId} onChange={(e) => setCourseId(e.target.value)}>

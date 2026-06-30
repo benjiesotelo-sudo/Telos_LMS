@@ -136,10 +136,10 @@ export default function TakeForm({ assignmentId, questions, deadline = null, ini
           {q.kind === 'num' ? (
             <input
               type="text"
-              inputMode="numeric"
+              inputMode="text"
               pattern={"-?\\d*"}
               className="feu-input"
-              style={{ width: 200 }}
+              style={{ width: '100%', maxWidth: 200 }}
               value={answers[q.id] ?? ''}
               onChange={(e) => { if (isValidNumericInput(e.target.value)) handleChange(q.id, e.target.value) }}
               placeholder="your answer"

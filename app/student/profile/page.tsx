@@ -22,11 +22,11 @@ export default async function StudentProfilePage() {
       <section className="feu-card" style={{ marginBottom: 16 }}>
         <h2 id="profile-acct-h" style={{ fontSize: 16, marginBottom: 14, color: 'var(--green)' }}>Account</h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <span className="feu-label" style={{ width: 140, flexShrink: 0 }}>Email</span>
             <span>{profile?.email ?? auth.user.email ?? <span className="feu-muted">—</span>}</span>
           </div>
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
             <span className="feu-label" style={{ width: 140, flexShrink: 0 }}>Role</span>
             <span style={{ textTransform: 'capitalize' }}>{profile?.role ?? <span className="feu-muted">—</span>}</span>
           </div>

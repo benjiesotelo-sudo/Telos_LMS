@@ -199,6 +199,24 @@ body {
 .feu-page { max-width: 880px; margin: 0 auto; padding: 28px 24px; }
 .feu-page h1 { font-family: var(--font-marcellus-sc, serif); color: var(--green); font-size: 22px; margin-bottom: 4px; }
 .feu-page-sub { color: var(--gray); font-size: 13px; margin-bottom: 20px; }
-@media (max-width: 720px) { .feu-shell { flex-direction: column; } .feu-sidebar { width: 100%; flex-direction: row;
-  border-right: none; border-bottom: 4px solid var(--gold); overflow-x: auto;
-  position: static; height: auto; } .feu-nav { flex-direction: row; } .feu-sidebar-foot { margin: 0; } }
+@media (max-width: 720px) {
+  .feu-shell { flex-direction: column; }
+  /* Sidebar becomes a compact top bar: brand + nav on one line, account row below. */
+  .feu-sidebar {
+    width: 100%; flex-direction: row; flex-wrap: wrap; align-items: center;
+    column-gap: 8px; row-gap: 6px; padding: 10px 12px;
+    border-right: none; border-bottom: 4px solid var(--gold);
+    position: static; height: auto; overflow: visible;
+  }
+  .feu-sidebar-brand {
+    border-bottom: none; padding: 0 8px 0 0; margin: 0;
+    font-size: 16px; flex-shrink: 0;
+  }
+  /* Nav links wrap onto new lines instead of forcing a horizontal scroll. */
+  .feu-nav { flex-direction: row; flex-wrap: wrap; flex: 1 1 auto; gap: 4px; padding: 0; }
+  .feu-nav-link { padding: 7px 12px; }
+  /* Account footer sits at the end of the bar, not a full-width block. */
+  .feu-sidebar-foot { margin: 0 0 0 auto; padding: 0; display: flex; align-items: center; gap: 10px; }
+  .feu-sidebar-foot p { margin: 0 !important; white-space: nowrap; }
+  .feu-sidebar-foot .feu-btn-outline { width: auto !important; padding: 7px 14px; }
+}
