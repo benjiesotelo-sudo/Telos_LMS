@@ -2,8 +2,8 @@
 
 Multi-instructor learning-management system (the "Telos" brand). This is the at-a-glance handoff so any new session picks up fast.
 
-## ▶▶ RESUME HERE (set 2026-06-30) — password reset FIXED + show-password + student request-reset (built & verified; NOT committed/deployed)
-**Context:** Benjie clarified the live-class issues — login itself is fine; the real gaps were (1) the admin **"Reset PW"** button didn't actually let students back in, and (2) students mistype passwords with no good recovery. Built four things this session, all verified: **302 tests green**, `npm run build` clean, `tsc` clean (except the pre-existing `tests/instructor.test.ts` period drift), and ONE multi-agent adversarial review (4 dimensions → verify) → **4 real findings fixed**. **Local only — not committed, not pushed; cloud still at 0019.**
+## ▶▶ RESUME HERE (set 2026-06-30) — password reset FIXED + show-password + student request-reset ✅ SHIPPED to production
+**Context:** Benjie clarified the live-class issues — login itself is fine; the real gaps were (1) the admin **"Reset PW"** button didn't actually let students back in, and (2) students mistype passwords with no good recovery. Built four things this session, all verified: **302 tests green**, `npm run build` clean, `tsc` clean (except the pre-existing `tests/instructor.test.ts` period drift), and ONE multi-agent adversarial review (4 dimensions → verify) → **4 real findings fixed**. **✅ SHIPPED: cloud migrated to 0020 (`supabase db push`, verified `0020 | 0020`), code deployed (commits `b43a03f` feature + `f2d3de9` UI fixes, pushed through `fdc49c8`); prod health-checked and the new reset panel confirmed live on `/login`. Merged branches `feat/theme-d-student` + `polish/student-ux-feu-theme` deleted.**
 
 ### What was built (each tested)
 1. **Admin "Reset PW" now restores access** (`adminResetPassword.ts`): also sets `status='active'` when the account is `pending`. Root cause — the password DID change, but `gateRoute` parks any non-`active` user at `/holding`, so a pending student stayed locked out. Suspended accounts left untouched (un-suspend via Edit user).
@@ -20,9 +20,10 @@ EDITED: `app/actions/admin/adminResetPassword.ts`, `app/login/page.tsx`, `app/re
 - **Approval IS the only identity check.** Someone who knows a student's email+student# could submit a request with a password they pick; only approve requests from students who actually asked.
 
 ### TO DO next
-1. **Commit + deploy** (this needs to reach the live class). Migration 0020 vs cloud-at-0019, so honor migrate-first: `supabase db push --linked --yes` → `git push origin main` (Vercel auto-deploys) → spot-check prod.
-2. **Bundle the still-uncommitted 2026-06-29 UI fixes** in the same commit (mobile sidebar, numeric keyboard, reveal warning, add-class callout — see the 2026-06-29 PM section below).
-3. Optional: the old email-based "Forgot password?" link is still on the login page (kept for instructor/admin recovery, below the new student flow). Decide whether to keep both.
+1. ✅ **Committed + deployed** — cloud at 0020, code live; the 2026-06-29 UI fixes shipped in the same batch.
+2. **Spot-check on prod** (real data): log in as yourself + as a student; try the admin **"Reset PW"** on a pending student, and the student **"Request a password reset"** → approve in **Admin Controls → Password resets**.
+3. **Supabase ops still pending** (your hands — see `AGENDA.md` §2): pg_cron `purge_expired_pending()`; unique index on `profiles.student_number`; signups locked to `role=student`; saved admin SQL snippets.
+4. Optional: the old email-based "Forgot password?" link is still on the login page (kept for instructor/admin recovery, below the new student flow). Decide whether to keep both.
 
 ---
 

@@ -1,13 +1,13 @@
 # Telos_LMS — Agenda & Status
 
-_Snapshot: 2026-06-30 · Live app: https://telos-lms.vercel.app · Cloud DB at migration **0019**_
+_Snapshot: 2026-06-30 · Live app: https://telos-lms.vercel.app · Cloud DB at migration **0020**_
 
 **Legend:** ✅ done & shipped · 🟡 built & verified, NOT yet deployed · 🔲 to do · 👤 your hands (dashboard/decision)
 
 ---
 
 ## Where we are in one breath
-The product is **feature-complete and live**. Production runs everything through the 2026-06-29 Theme D ship. Two batches of work are **built and verified locally but not yet committed or deployed**: today's password/login fixes, and the 2026-06-29 UI polish. What's left is **shipping, a handful of Supabase dashboard chores, and housekeeping** — no remaining feature building.
+The product is **feature-complete and live**. As of 2026-06-30 the password/login fixes **and** the 2026-06-29 UI polish are **shipped to production** (cloud at 0020, code deployed, health-checked). What's left is **a handful of Supabase dashboard chores, light housekeeping, and a prod spot-check** — no remaining feature building.
 
 ---
 
@@ -27,21 +27,21 @@ The product is **feature-complete and live**. Production runs everything through
 - ✅ **Hardening** — server-side autosave + cross-device resume; status enforcement; transactional import RPC; BEFORE-UPDATE role/status guard trigger; anti-enumeration; e2e smoke (16/16).
 - ✅ **Cloud migrated to 0019**, code deployed (commit `8d081f2`), production health-checked.
 
-### This session — 2026-06-30 · Password & login 🟡 _(built & verified, NOT deployed)_
-- 🟡 **Admin "Reset PW" fixed** — now re-activates a `pending` account, so a reset actually lets the student back in (root cause: the password changed but the route gate kept parking pending users at `/holding`).
-- 🟡 **Show/hide password toggle** on login + registration.
-- 🟡 **Confirm-password field on registration** — second box always masked, with live mismatch warning.
-- 🟡 **Student request-reset flow** (email-free, instructor-approved) — locked-out student picks a new password → lands in **Admin Controls → Password resets** → you Approve/Reject. New migration `0020`.
-- **Verification:** 302/302 tests · build clean · typecheck clean · 16-agent adversarial review → 4 real findings fixed.
+### This session — 2026-06-30 · Password & login ✅ _(SHIPPED to production)_
+- ✅ **Admin "Reset PW" fixed** — now re-activates a `pending` account, so a reset actually lets the student back in (root cause: the password changed but the route gate kept parking pending users at `/holding`).
+- ✅ **Show/hide password toggle** on login + registration.
+- ✅ **Confirm-password field on registration** — second box always masked, with live mismatch warning.
+- ✅ **Student request-reset flow** (email-free, instructor-approved) — locked-out student picks a new password → lands in **Admin Controls → Password resets** → you Approve/Reject. Migration `0020`.
+- **Verification:** 302/302 tests · build clean · typecheck clean · 16-agent adversarial review → 4 real findings fixed · cloud 0020 + prod health-checked (new reset panel confirmed live).
 
 ---
 
 ## 🔲 Remaining
 
-### 1. Ship to production 🟡 _(priority — this reaches your live class)_
-- 🔲 Commit today's password-reset work **+** the still-uncommitted 2026-06-29 UI fixes (mobile sidebar, numeric keyboard, quiz input width, profile row wrap, reveal-answers warning, add-class callout) **+** the 1 unpushed docs commit.
-- 🔲 Deploy in order: `supabase db push --linked --yes` (migrate cloud 0019 → 0020 FIRST) → `git push origin main` (Vercel auto-deploys).
-- _Claude can do all of this; the actual push runs only on your go._
+### 1. Ship to production ✅ _(done 2026-06-30)_
+- ✅ Committed (feature `b43a03f` · UI fixes `f2d3de9` · docs `fdc49c8`) — today's password-reset work + the 2026-06-29 UI fixes shipped together.
+- ✅ Deployed in order: `supabase db push` (cloud 0019 → **0020**, verified) → `git push origin main` (Vercel) → prod health-checked, new reset panel live on `/login`.
+- 🔲 _Remaining: the prod spot-check on real data (see §5)._
 
 ### 2. Supabase ops 👤 _(dashboard / SQL Editor — Claude can prep ready-to-paste SQL)_
 - 🔲 Schedule `purge_expired_pending()` via **pg_cron** (auto-cleans stale >7-day pending signups).
@@ -49,8 +49,8 @@ The product is **feature-complete and live**. Production runs everything through
 - 🔲 Keep public signups OFF / ensure `handle_new_user` forces `role=student` (no self-promotion on cloud signup).
 - 🔲 Save admin SQL snippets in the dashboard: **List Users · Clean Test Data · Health Check · 1st Setup**.
 
-### 3. Housekeeping 🔲 _(Claude can do now)_
-- 🔲 Delete merged branches `feat/theme-d-student` + `polish/student-ux-feu-theme` _(both verified fully merged into `main` — safe)._
+### 3. Housekeeping
+- ✅ Deleted merged branches `feat/theme-d-student` + `polish/student-ux-feu-theme` (2026-06-30).
 - 🔲 Test-data cleanup (SMOKE accounts / SMOKE101 / "Homework Smoke") — **on hold until you say so**; scoped-safe SQL is ready.
 
 ### 4. Decisions 👤 _(yours — not a build)_
