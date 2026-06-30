@@ -2,21 +2,61 @@
 
 Multi-instructor learning-management system (the "Telos" brand). This is the at-a-glance handoff so any new session picks up fast.
 
-## ▶▶ NEXT SESSION — RESUME HERE (set 2026-06-29)
-**Where we are:** Theme D + hardening + 4-type taxonomy/graded toggle + all UX rounds are **BUILT, TESTED (289), REVIEWED (3×), and SHIPPED to production** (cloud migrated to 0019; `main` @ `db791b0`; Vercel live at https://telos-lms.vercel.app). **No code/features are pending** — the whole build agenda is done.
+## ▶▶ RESUME HERE (set 2026-06-30) — password reset FIXED + show-password + student request-reset (built & verified; NOT committed/deployed)
+**Context:** Benjie clarified the live-class issues — login itself is fine; the real gaps were (1) the admin **"Reset PW"** button didn't actually let students back in, and (2) students mistype passwords with no good recovery. Built four things this session, all verified: **302 tests green**, `npm run build` clean, `tsc` clean (except the pre-existing `tests/instructor.test.ts` period drift), and ONE multi-agent adversarial review (4 dimensions → verify) → **4 real findings fixed**. **Local only — not committed, not pushed; cloud still at 0019.**
 
-**Tomorrow's agenda (all NON-code — your hands / your call):**
-1. **Live spot-check** — log into https://telos-lms.vercel.app as **yourself + a student** on real data; confirm the new UI (Assessment Settings, Admin Controls, student Dashboard tabs, Grades). If anything's off → tell Claude to fix-and-redeploy.
-2. **Supabase SQL ops** (run in the cloud SQL Editor — Benjie's hands):
-   - Schedule `select public.purge_expired_pending();` via **pg_cron** (purge >7-day stale pending).
-   - Add a **unique index on `profiles.student_number`**.
-   - **`handle_new_user` trigger**: keep public signups OFF or force `role=student` **before opening self-registration** (it still trusts metadata `role`).
-   - Save admin SQL snippets: `List Users`, `Clean Test Data`, `Health Check`, `1st Setup`.
-3. **Decision** (owner: Benjie): should `projects/Telos_AMS0011` graduate to its own repo? (Tracked in AIS-OS `decisions/log.md`.)
-4. **Branch cleanup:** once the live spot-check passes, delete `feat/theme-d-student` (kept now as a safety net; already merged to main).
-5. **Test data:** when done testing, run the scoped smoke-data cleanup SQL (in the "Test data" section below) — safe, cannot touch Mamoun/Benjie/AMS0011.
+### What was built (each tested)
+1. **Admin "Reset PW" now restores access** (`adminResetPassword.ts`): also sets `status='active'` when the account is `pending`. Root cause — the password DID change, but `gateRoute` parks any non-`active` user at `/holding`, so a pending student stayed locked out. Suspended accounts left untouched (un-suspend via Edit user).
+2. **Show/hide password toggle** — reusable `app/components/PasswordInput.tsx` (controlled or uncontrolled; keyboard-reachable) on the **login** password and the **registration** password.
+3. **Confirm-password field on registration** — second box ALWAYS masked (no toggle) + live mismatch warning + submit-time check, so students truly retype it. Same confirm pattern in the student request-reset panel.
+4. **Student request-reset flow (email-free, instructor-approved)** — migration **0020** `password_reset_requests` (service-role-only, like answer keys; holds the student's CHOSEN new password until approval, NULLed on resolve). Locked-out student on the login page → `RequestResetPanel` (auto-opens after a failed login) picks a new password (twice) → lands in **Admin Controls → Password resets** tab → instructor **Approve** (applies the chosen password + activates) / **Reject** (discards). Identity = EXACT email + student# (`.eq`, not `.ilike`); suspended students excluded; anti-enumeration (always returns ok).
 
-**How to deploy in future** (proven this session): `supabase db push --linked --yes` (migrate cloud FIRST) → `git push origin main` (Vercel deploys). Migrations are additive; always migrate before pushing code.
+### Files
+NEW: `supabase/migrations/0020_password_reset_requests.sql`, `app/actions/passwordResetRequests.ts`, `app/components/PasswordInput.tsx`, `app/login/RequestResetPanel.tsx`, `app/instructor/admin/ResetReviewButtons.tsx`, `tests/admin-reset-password.test.ts`, `tests/password-reset-requests.test.ts`.
+EDITED: `app/actions/admin/adminResetPassword.ts`, `app/login/page.tsx`, `app/register/[token]/RegisterForm.tsx`, `app/instructor/admin/page.tsx`.
+
+### Trade-offs (by design — Option A, chosen with Benjie)
+- The student's chosen new password is held (plaintext) in `password_reset_requests.new_password` until you approve, then NULLed. Protected like `assessment_keys` (RLS on, ZERO policies → service-role only). Reviewed & accepted.
+- **Approval IS the only identity check.** Someone who knows a student's email+student# could submit a request with a password they pick; only approve requests from students who actually asked.
+
+### TO DO next
+1. **Commit + deploy** (this needs to reach the live class). Migration 0020 vs cloud-at-0019, so honor migrate-first: `supabase db push --linked --yes` → `git push origin main` (Vercel auto-deploys) → spot-check prod.
+2. **Bundle the still-uncommitted 2026-06-29 UI fixes** in the same commit (mobile sidebar, numeric keyboard, reveal warning, add-class callout — see the 2026-06-29 PM section below).
+3. Optional: the old email-based "Forgot password?" link is still on the login page (kept for instructor/admin recovery, below the new student flow). Decide whether to keep both.
+
+---
+
+## ▶▶ (prior) NEXT SESSION — RESUME HERE (set 2026-06-29 PM, after FIRST LIVE CLASS TEST) — reset/login items SUPERSEDED by the 2026-06-30 section above
+**Context:** Benjie ran the app in a **real class** for the first time. Several issues surfaced. Claude diagnosed all of them; some are fixed locally (uncommitted), the big one (login/password) is diagnosed but NOT yet fixed (auth is risky — wanted Benjie present to test). **Benjie shut down mid-session.**
+
+### ⚠️ #1 PRIORITY — Students can't log in / password reset "doesn't work" (DIAGNOSED, NOT FIXED)
+**Root cause (verified in code):** Students who self-register via an enrollment link are created with `status='pending'` (`registerViaLink.ts:64`). A pending user CAN authenticate with the correct password, but the route gate parks them at `/holding` ("account not active") — `gateRoute.ts:31-32`. They stay locked out until an instructor **APPROVES** them. Resetting the password does nothing because the blocker is **status, not password**.
+- **Immediate workaround for Benjie (no code):** Go to **Enrollment → Pending registrations** and **Approve** each student (calls `approvePending` → sets `status='active'`). Then they can log in. This is the real fix for "can't log in," not password resets.
+- **Secondary real bug:** `adminResetPassword.ts:13` updates the auth password but NOT `profiles.status`, so resetting a pending student's password never unblocks them (compare `approvePending.ts:20` which correctly sets `status='active'`). **DECISION NEEDED:** should the "reset password" admin action also activate? OR should it refuse for pending users with a "approve them first" message? OR (bigger) should link-registration auto-activate and skip the pending/approval step entirely?
+- **Also requested by Benjie:** add a **confirm-password field** to the registration form (`app/register/[token]/RegisterForm.tsx` — currently no confirm field) so students don't mistype their password at signup. This is a likely contributor to "wrong password" reports.
+
+### Local UNCOMMITTED fixes from this session (review → test → deploy next time)
+All compile clean (`tsc` passes except pre-existing `tests/instructor.test.ts` period errors). NOT committed, NOT deployed:
+1. **Mobile sidebar top-bar** (`app/globals.css` @media ≤720px) — was cramming brand+nav+username+full-width logout into one scrolling row; reworked into a clean wrapping top bar. This is the main "everything looks weird on mobile" fix (sidebar wraps every page).
+2. **Numeric answer keyboard** (`TakeForm.tsx:139`) — `inputMode="numeric"` → `"text"` so the **minus key** shows on phones (students couldn't type negatives). Covers whole numbers + negatives only (no decimals — Benjie confirmed that's fine). Grading untouched.
+3. **Quiz input width** (`TakeForm.tsx:142`) — `width:200` → `width:'100%', maxWidth:200`.
+4. **Profile rows** (`student/profile/page.tsx`) — added `flexWrap` (minor).
+5. **Reveal-answers warning** (`AssignmentMetaControls.tsx`) — inline amber note when Reveal is ON for a quiz/exam without a past Closes time (see #2 below).
+- *Investigated & deliberately LEFT ALONE (already fine):* instructor grade tables already scroll (`overflowX:auto`); student grade cards wrap 2-per-row OK; Next.js 16 auto-injects the mobile viewport tag (an agent falsely claimed it was missing — it is NOT).
+
+### #2 — "Reveal Answers" doesn't show students right/wrong (DIAGNOSED; workaround + UI warning added)
+**Root cause:** For a **quiz/exam**, the reveal gate (`getRevealedAnswers.ts:75-83`, mirrored `getStudentData.ts:29-31`) requires ALL of: reveal toggle ON + submission graded + **Closes time has passed**. If "Closes" is blank or in the future, answers NEVER reveal — silently. (Homework/activity type reveals immediately, no close needed.)
+- **Workaround for Benjie:** in the assessment's Contents controls, set **"Closes"** to a time in the **past** (+ Reveal on). Students refresh results → they see answers. The new amber warning now explains this in-app.
+
+### Earlier UX fix still uncommitted from before this session
+- **Course → "add a class section" callout** (`CoursePanel.tsx` + `ClassPanel.tsx#new-class`) — after creating a course, a green callout points to the section step (a bare course can't be enrolled into; enroll links attach to a class/section, not a course). From the start-of-session enrollment confusion.
+
+### To do next session (in order)
+1. **Decide the auth/login approach** (#1 above) — auto-activate link registrations? and/or fix `adminResetPassword` to activate? and/or refuse-with-guidance? Then implement + add confirm-password to RegisterForm.
+2. **Review all uncommitted changes** (`git diff`), run `npm test`, then commit + deploy (`supabase db push --linked --yes` if any new migration → `git push origin main`). The UI fixes above need a Vercel deploy to reach the live class.
+3. **Carry-over from this morning (still valid):** Supabase SQL ops — pg_cron `purge_expired_pending()`, unique index on `profiles.student_number`, keep public signups off / force `role=student`; branch cleanup of `feat/theme-d-student`; Telos_AMS0011 repo decision.
+
+**How to deploy** (proven): `supabase db push --linked --yes` (migrate cloud FIRST) → `git push origin main` (Vercel deploys). Migrations are additive; always migrate before pushing code.
 
 
 ## Status (2026-06-26): Slice 1 LIVE + Theme B built on `feat/theme-b-classes-roster` (awaiting merge)
